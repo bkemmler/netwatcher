@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+{% block title %}Geräte – Netwatcher{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <h3 class="mb-0">Geräte ({{ total }})</h3>
+  <div class="btn-group">
+    <div class="dropdown">
+      <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+        Spalten
+      </button>
+      <ul class="dropdown-menu" id="col-selector">
+         {% for col, label in [('ip','IP'),('mac','MAC'),('hostname','Hostname'),('vendor','Hersteller'),('name','Name'),('status','Status'),('notes','Notizen'),('first_seen','Erstmals gesehen'),('last_seen','Zuletzt gesehen')] %}
+        <li>
+          <label class="dropdown-item d-flex align-items-center gap-2">
+            <input type="checkbox" data-col="{{ col }}"> {{ label }}
+          </label>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('export', format='csv', **request.args) }}">CSV</a>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('export', format='json', **request.args) }}">JSON</a>
+  </div>
+</div>
+
+<form method="get" class="row g-2 mb-2">
+  <div class="col-md-4">
+    <input type="text" name="q" class="form-control form-control-sm" placeholder="Suche (IP, MAC, Name, Hersteller)" value="{{ search }}">
+  </div>
+  <div class="col-md-3">
+    <select name="known" class="form-select form-select-sm">
+      <option value="">alle</option>
+      <option value="1" {% if known_filter == '1' %}selected{% endif %}>bekannt</option>
+      <option value="0" {% if known_filter == '0' %}selected{% endif %}>unbekannt</option>
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select name="sort" class="form-select form-select-sm">
+      {% for s in ['first_seen','last_seen','mac','ip_last','hostname','vendor','name'] %}
+        <option value="{{ s }}" {% if sort == s %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select name="dir" class="form-select form-select-sm">
+      <option value="desc" {% if dir == 'desc' %}selected{% endif %}>absteigend</option>
+      <option value="asc" {% if dir == 'asc' %}selected{% endif %}>aufsteigend</option>
+    </select>
+  </div>
+  <div class="col-md-1">
+    <button class="btn btn-primary btn-sm w-100">Filter</button>
+  </div>
+</form>
+
+{% set pagination %}
+{% if pages > 1 %}
+<nav><ul class="pagination pagination-sm mb-0">
+  {% for p in range(1, pages + 1) %}
+    <li class="page-item {% if p == page %}active{% endif %}">
+      <a class="page-link" href="{{ url_for('devices', q=search, known=known_filter, sort=sort, dir=dir, page=p) }}">{{ p }}</a>
+    </li>
+  {% endfor %}
+</ul></nav>
+{% endif %}
+{% endset %}
+
+<div class="mb-2 d-flex justify-content-between align-items-center">
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-primary btn-sm edit-toggle-btn" type="button" onclick="toggleEditMode()">Bearbeiten</button>
+    <div class="d-flex gap-2 edit-controls-row" hidden>
+      <button class="btn btn-success btn-sm" type="submit" form="device-form">Speichern</button>
+      <button class="btn btn-outline-secondary btn-sm" type="button" onclick="toggleEditMode()">Abbrechen</button>
+    </div>
+  </div>
+  {{ pagination }}
+</div>
+
+<form method="post" action="{{ url_for('bulk_update') }}" id="device-form">
+  <input type="hidden" name="q" value="{{ search }}">
+  <input type="hidden" name="known" value="{{ known_filter }}">
+  <input type="hidden" name="sort" value="{{ sort }}">
+  <input type="hidden" name="dir" value="{{ dir }}">
+  <input type="hidden" name="page" value="{{ page }}">
+
+  <div class="table-responsive">
+    <table class="table table-sm table-hover align-middle">
+      <thead>
+        <tr>
+          <th data-col="ip">IP</th>
+          <th data-col="mac">MAC</th>
+          <th data-col="hostname">Hostname</th>
+          <th data-col="vendor">Hersteller</th>
+          <th data-col="name">Name</th>
+          <th data-col="status">Status</th>
+          <th data-col="notes">Notizen</th>
+          <th data-col="first_seen">Erstmals gesehen</th>
+          <th data-col="last_seen">Zuletzt gesehen</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in devices %}
+        <tr>
+          <td data-col="ip"><a href="{{ url_for('device_detail', id=d.id) }}">{{ d.ip_last }}</a></td>
+          <td data-col="mac"><code>{{ d.mac }}</code></td>
+          <td data-col="hostname">{{ d.hostname or '—' }}</td>
+          <td data-col="vendor">{{ d.vendor or '—' }}</td>
+          <td data-col="name">
+            <span class="view-mode">{{ d.name or '—' }}</span>
+            <span class="edit-mode d-flex gap-1" hidden>
+              <input type="text" class="form-control form-control-sm name-input" name="name_{{ d.id }}" value="{{ d.name or '' }}">
+              {% if d.hostname %}
+              <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-1 copy-hostname-btn" title="Hostname übernehmen">&larr;</button>
+              {% endif %}
+            </span>
+          </td>
+          <td data-col="status">
+            <span class="view-mode">
+              {% if d.known %}
+                <span class="marker-known">bekannt</span>
+              {% else %}
+                <span class="marker-unknown">unbekannt</span>
+              {% endif %}
+            </span>
+            <span class="edit-mode" hidden>
+              <input class="form-check-input known-cb" type="checkbox" name="known_{{ d.id }}" value="1" {% if d.known %}checked{% endif %}>
+              <input type="hidden" name="known_{{ d.id }}" value="0">
+            </span>
+          </td>
+          <td data-col="notes">
+            <span class="view-mode notes-cell">{{ d.notes or '—' }}</span>
+            <textarea class="form-control form-control-sm edit-mode" hidden name="notes_{{ d.id }}" rows="2">{{ d.notes or '' }}</textarea>
+          </td>
+          <td data-col="first_seen"><small>{{ format_date(d.first_seen) }}</small></td>
+          <td data-col="last_seen"><small>{{ format_date(d.last_seen) }}</small></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9" class="text-center text-muted">Keine Geräte gefunden.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</form>
+
+<div class="mt-2 d-flex justify-content-between align-items-center">
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-primary btn-sm edit-toggle-btn" type="button" onclick="toggleEditMode()">Bearbeiten</button>
+    <div class="d-flex gap-2 edit-controls-row" hidden>
+      <button class="btn btn-success btn-sm" type="submit" form="device-form">Speichern</button>
+      <button class="btn btn-outline-secondary btn-sm" type="button" onclick="toggleEditMode()">Abbrechen</button>
+    </div>
+  </div>
+  {{ pagination }}
+</div>
+
+<script>
+(function() {
+  var STORAGE_KEY = 'netwatcher-columns';
+  var colState = {};
+  try { colState = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch(e) {}
+
+  function applyVisibility() {
+    var cells = document.querySelectorAll('th[data-col], td[data-col]');
+    for (var i = 0; i < cells.length; i++) {
+      var col = cells[i].getAttribute('data-col');
+      cells[i].classList.toggle('col-hidden', colState[col] === false);
+    }
+    var cbs = document.querySelectorAll('#col-selector input[data-col]');
+    for (var j = 0; j < cbs.length; j++) {
+      cbs[j].checked = colState[cbs[j].getAttribute('data-col')] !== false;
+    }
+  }
+
+  document.getElementById('col-selector').addEventListener('change', function(e) {
+    if (e.target.type === 'checkbox') {
+      colState[e.target.getAttribute('data-col')] = e.target.checked;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(colState));
+      applyVisibility();
+    }
+  });
+
+  if (colState.notes === undefined) {
+    colState.notes = false;
+    colState.last_seen = false;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(colState));
+  }
+  applyVisibility();
+
+  // Auto-Known: Name-Eingabe prüft automatisch den "bekannt"-Haken
+  var nameInputs = document.querySelectorAll('.name-input');
+  for (var k = 0; k < nameInputs.length; k++) {
+    nameInputs[k].addEventListener('input', function() {
+      if (this.value.trim()) {
+        var row = this.closest('tr');
+        var cb = row.querySelector('.known-cb');
+        if (cb) cb.checked = true;
+      }
+    });
+  }
+
+  // Copy-Hostname: Button kopiert Hostname in das Name-Feld
+  var copyBtns = document.querySelectorAll('.copy-hostname-btn');
+  for (var m = 0; m < copyBtns.length; m++) {
+    copyBtns[m].addEventListener('click', function() {
+      var row = this.closest('tr');
+      var hostTd = row.querySelector('[data-col="hostname"]');
+      var hostname = hostTd ? hostTd.textContent.trim() : '';
+      if (hostname && hostname !== '—') {
+        var ni = row.querySelector('.name-input');
+        if (ni) { ni.value = hostname; ni.dispatchEvent(new Event('input', {bubbles: true})); }
+      }
+    });
+  }
+
+  window.toggleEditMode = function() {
+    var active = document.body.classList.toggle('edit-active');
+    var toggles = document.querySelectorAll('.edit-toggle-btn');
+    for (var t = 0; t < toggles.length; t++) toggles[t].hidden = active;
+    var controls = document.querySelectorAll('.edit-controls-row');
+    for (var c = 0; c < controls.length; c++) controls[c].hidden = !active;
+    var views = document.querySelectorAll('.view-mode');
+    for (var i = 0; i < views.length; i++) views[i].hidden = active;
+    var edits = document.querySelectorAll('.edit-mode');
+    for (var j = 0; j < edits.length; j++) edits[j].hidden = !active;
+  };
+})();
+</script>
+
+<style>
+.col-hidden { display: none !important; }
+.notes-cell { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle; }
+.edit-controls-row[hidden] { display: none !important; }
+.edit-mode[hidden] { display: none !important; }
+</style>
+{% endblock %}

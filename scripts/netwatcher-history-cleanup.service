@@ -1,0 +1,17 @@
+[Unit]
+Description=Netwatcher Verlaufsbereinigung (löscht Einträge vom Vortag)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=__NETWATCHER_USER__
+WorkingDirectory=__NETWATCHER_DIR__
+Environment="NETWATCHER_DB=__NETWATCHER_DB__"
+ExecStart=__NETWATCHER_BIN__ cleanup-history
+
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=__NETWATCHER_DB_DIR__
+PrivateTmp=true

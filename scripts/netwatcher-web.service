@@ -1,0 +1,20 @@
+[Unit]
+Description=Netwatcher Web UI (gunicorn)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__NETWATCHER_USER__
+WorkingDirectory=__NETWATCHER_DIR__
+Environment="NETWATCHER_DB=__NETWATCHER_DB__"
+Environment="NETWATCHER_SECRET=__NETWATCHER_SECRET__"
+ExecStart=__GUNICORN_BIN__ --worker-class gthread --workers 2 --threads 4 --timeout 120 --graceful-timeout 30 --keep-alive 5 --bind __WEB_BIND__:__WEB_PORT__ --chdir __NETWATCHER_DIR__ --worker-tmp-dir /dev/shm --access-logfile - --error-logfile - netwatcher.web.app:app
+
+# immer neu starten, auch nach sauberem Exit (SIGTERM -> status 0),
+# damit der Service nie dauerhaft tot bleibt
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

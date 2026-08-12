@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}Gerät {{ device.mac }} – Netwatcher{% endblock %}
+{% block content %}
+<a href="{{ url_for('devices') }}" class="btn btn-link btn-sm ps-0">&larr; Zurück</a>
+<h3 class="mb-3">{{ device.mac }}
+  {% if device.known %}<span class="badge bg-success">bekannt</span>{% else %}<span class="badge bg-danger">unbekannt</span>{% endif %}
+</h3>
+
+<div class="row g-4">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">Gerät</div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-4">IP (zuletzt)</dt><dd class="col-sm-8"><code>{{ device.ip_last or '—' }}</code></dd>
+          <dt class="col-sm-4">MAC</dt><dd class="col-sm-8"><code>{{ device.mac }}</code></dd>
+          <dt class="col-sm-4">OUI</dt><dd class="col-sm-8">{{ device.oui or '—' }}</dd>
+          <dt class="col-sm-4">Hostname</dt><dd class="col-sm-8">{{ device.hostname or '—' }}</dd>
+          <dt class="col-sm-4">Hersteller</dt><dd class="col-sm-8">{{ device.vendor or '—' }}</dd>
+          <dt class="col-sm-4">Erstmals gesehen</dt><dd class="col-sm-8"><small>{{ format_date(device.first_seen) }}</small></dd>
+          <dt class="col-sm-4">Zuletzt gesehen</dt><dd class="col-sm-8"><small>{{ format_date(device.last_seen) }}</small></dd>
+          <dt class="col-sm-4">Letzter Detail-Scan</dt><dd class="col-sm-8"><small>{{ format_date(device.last_detail_scan) }}</small></dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">Metadaten bearbeiten</div>
+      <div class="card-body">
+        <form method="post">
+          <div class="mb-3">
+            <label class="form-label">Name</label>
+            <input type="text" name="name" class="form-control" value="{{ device.name or '' }}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Notizen</label>
+            <textarea name="notes" class="form-control" rows="3">{{ device.notes or '' }}</textarea>
+          </div>
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" name="known" value="1" id="known" {% if device.known %}checked{% endif %}>
+            <label class="form-check-label" for="known">als bekannt markieren</label>
+          </div>
+          <button class="btn btn-primary">Speichern</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% set dns_val = device.dns_name %}
+{% set mdns_val = device.mdns_name %}
+{% set v6_val = device.ipv6_addresses %}
+{% if dns_val or mdns_val or v6_val %}
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">Netzwerk-Namen</div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-2">DNS</dt><dd class="col-sm-10"><code>{{ dns_val or '—' }}</code></dd>
+          <dt class="col-sm-2">mDNS</dt><dd class="col-sm-10"><code>{{ mdns_val or '—' }}</code></dd>
+          <dt class="col-sm-2">IPv6</dt><dd class="col-sm-10"><code>{{ v6_val or '—' }}</code></dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if device.opnsense_last_sync %}
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">OPNsense <small class="text-muted">(letzte Sync: {{ format_date(device.opnsense_last_sync) }})</small></div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-2">Hostname</dt><dd class="col-sm-10">{{ device.opnsense_hostname or '—' }}</dd>
+          <dt class="col-sm-2">IPv4</dt><dd class="col-sm-10"><code>{{ format_ips(device.opnsense_ipv4) or '—' }}</code></dd>
+          <dt class="col-sm-2">IPv6</dt><dd class="col-sm-10"><code>{{ format_ips(device.opnsense_ipv6) or '—' }}</code></dd>
+          <dt class="col-sm-2">Beschreibung</dt><dd class="col-sm-10">{{ device.opnsense_description or '—' }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">OS</div>
+      <div class="card-body">
+        {{ render_detail(device.os_info, 'os') | safe }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">Dienste / Ports</div>
+      <div class="card-body">
+        {{ render_detail(device.services, 'services') | safe }}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if device.http_info or device.tls_info %}
+<div class="row mt-4">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">HTTP</div>
+      <div class="card-body">
+        {{ render_detail(device.http_info, 'http') | safe }}
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">TLS</div>
+      <div class="card-body">
+        {{ render_detail(device.tls_info, 'tls') | safe }}
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if device.network_info %}
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">Netzwerk-Protokolle (UPnP / SMB)</div>
+      <div class="card-body">
+        {{ render_detail(device.network_info, 'network') | safe }}
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<h5 class="mt-4">Verlauf</h5>
+<div class="table-responsive">
+  <table class="table table-sm">
+    <thead><tr><th>Zeit</th><th>Typ</th><th>IP</th></tr></thead>
+    <tbody>
+      {% for h in history %}
+      <tr><td><small>{{ format_date(h.ts) }}</small></td><td>{{ h.scan_type }}</td><td><code>{{ h.ip or '—' }}</code></td></tr>
+      {% else %}
+      <tr><td colspan="3" class="text-muted text-center">keine Einträge</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

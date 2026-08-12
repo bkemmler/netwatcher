@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block title %}Konfiguration – Netwatcher{% endblock %}
+{% block content %}
+<h3 class="mb-3">Konfiguration</h3>
+<form method="post">
+  <button class="btn btn-primary mb-3">Speichern</button>
+  <div class="card mb-3">
+    <div class="card-header">ARP-Scan</div>
+    <div class="card-body row g-3">
+      <div class="col-md-6">
+        <label class="form-label">IP-Bereich (CIDR)</label>
+        <input type="text" name="scan_range" class="form-control" value="{{ cfg.scan_range }}">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Interface (leer = auto)</label>
+        <input type="text" name="scan_interface" class="form-control" value="{{ cfg.scan_interface }}">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Interval (s)</label>
+        <input type="number" name="scan_interval_seconds" class="form-control" value="{{ cfg.scan_interval_seconds }}">
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header">Detail-Scan (nmap)</div>
+    <div class="card-body row g-3">
+      <div class="col-12 form-check">
+        <input class="form-check-input" type="checkbox" name="detail_interval_enabled" value="1" id="d_int" {% if cfg.detail_interval_enabled == '1' %}checked{% endif %}>
+        <label class="form-check-label" for="d_int">Detail-Scan aktiv</label>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Intervall (Stunden)</label>
+        <input type="number" name="detail_scan_interval_hours" class="form-control" value="{{ cfg.get('detail_scan_interval_hours', '6') }}">
+        <div class="form-text">Geräte werden erst nach Ablauf dieses Intervalls erneut gescannt.</div>
+      </div>
+      <div class="col-12"><strong>Zusätzliche Informationen</strong></div>
+      <div class="col-md-4">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="detail_dns_enabled" value="1" id="d_dns" {% if cfg.get('detail_dns_enabled', '1') == '1' %}checked{% endif %}>
+          <label class="form-check-label" for="d_dns">DNS (Reverse-Lookup)</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="detail_mdns_enabled" value="1" id="d_mdns" {% if cfg.get('detail_mdns_enabled', '1') == '1' %}checked{% endif %}>
+          <label class="form-check-label" for="d_mdns">mDNS / Bonjour</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="detail_ipv6_enabled" value="1" id="d_v6" {% if cfg.get('detail_ipv6_enabled', '1') == '1' %}checked{% endif %}>
+          <label class="form-check-label" for="d_v6">IPv6-Adressen</label>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="detail_http_tls_enabled" value="1" id="d_hs" {% if cfg.get('detail_http_tls_enabled', '1') == '1' %}checked{% endif %}>
+          <label class="form-check-label" for="d_hs">HTTP &amp; TLS</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="detail_upnp_enabled" value="1" id="d_uni" {% if cfg.get('detail_upnp_enabled', '1') == '1' %}checked{% endif %}>
+          <label class="form-check-label" for="d_uni">UPnP / SSDP</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="detail_smb_enabled" value="1" id="d_smb" {% if cfg.get('detail_smb_enabled', '1') == '1' %}checked{% endif %}>
+          <label class="form-check-label" for="d_smb">SMB / NetBIOS</label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header">OPNsense (Dnsmasq)</div>
+    <div class="card-body row g-3">
+      <div class="col-12 form-check">
+        <input class="form-check-input" type="checkbox" name="opnsense_enabled" value="1" id="opn_en" {% if cfg.get('opnsense_enabled','0') == '1' %}checked{% endif %}>
+        <label class="form-check-label" for="opn_en">OPNsense-Synchronisierung aktiv</label>
+      </div>
+      <div class="col-md-8">
+        <label class="form-label">API-URL</label>
+        <input type="text" name="opnsense_url" class="form-control" placeholder="https://192.168.1.1" value="{{ cfg.get('opnsense_url','') }}">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Timeout (s)</label>
+        <input type="number" name="opnsense_timeout" class="form-control" value="{{ cfg.get('opnsense_timeout','10') }}">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">API-Key</label>
+        <input type="text" name="opnsense_api_key" class="form-control" value="{{ cfg.get('opnsense_api_key','') }}">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">API-Secret</label>
+        <input type="password" name="opnsense_api_secret" class="form-control" value="{{ cfg.get('opnsense_api_secret','') }}">
+      </div>
+      <div class="col-12 form-check">
+        <input class="form-check-input" type="checkbox" name="opnsense_verify_tls" value="1" id="opn_tls" {% if cfg.get('opnsense_verify_tls','1') == '1' %}checked{% endif %}>
+        <label class="form-check-label" for="opn_tls">TLS-Zertifikat prüfen</label>
+      </div>
+      <div class="col-12">
+        <button class="btn btn-outline-secondary btn-sm" formaction="{{ url_for('opnsense_sync') }}" formmethod="post">Jetzt synchronisieren</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header">Benachrichtigung (Gotify)</div>
+    <div class="card-body row g-3">
+      <div class="col-md-6">
+        <label class="form-label">Gotify Server URL</label>
+        <input type="text" name="gotify_url" class="form-control" placeholder="https://gotify.example.com" value="{{ cfg.gotify_url }}">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">App Token</label>
+        <input type="text" name="gotify_token" class="form-control" value="{{ cfg.gotify_token }}">
+      </div>
+      <div class="col-12 form-check">
+        <input class="form-check-input" type="checkbox" name="notify_on_new" value="1" id="non" {% if cfg.notify_on_new == '1' %}checked{% endif %}>
+        <label class="form-check-label" for="non">Benachrichtigung bei neuen Geräten senden</label>
+      </div>
+      <div class="col-12">
+        <button class="btn btn-outline-secondary btn-sm" name="test_gotify" value="1">Test-Nachricht senden</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header">Web-UI</div>
+    <div class="card-body row g-3">
+      <div class="col-md-6">
+        <label class="form-label">Bind Host</label>
+        <input type="text" name="web_bind_host" class="form-control" value="{{ cfg.web_bind_host }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Port</label>
+        <input type="number" name="web_bind_port" class="form-control" value="{{ cfg.web_bind_port }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Datumsformat</label>
+        <select name="date_format" class="form-select">
+          <option value="de" {% if cfg.get('date_format','de') == 'de' %}selected{% endif %}>Deutsch (31.01.2026 14:30)</option>
+          <option value="en" {% if cfg.get('date_format','de') == 'en' %}selected{% endif %}>English (2026-01-31 14:30)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn btn-primary">Speichern</button>
+</form>
+
+<div class="card mb-3 mt-4">
+  <div class="card-header">Verlauf bereinigen</div>
+  <div class="card-body">
+    <p class="small text-muted mb-2">Löscht alle Verlaufseinträge vom Vortag, behält aber den allerersten Scan pro Gerät.</p>
+    <form method="post" action="{{ url_for('cleanup_history') }}">
+      <button class="btn btn-outline-secondary btn-sm">Jetzt bereinigen</button>
+    </form>
+  </div>
+</div>
+
+<h5 class="mt-4">Benutzer</h5>
+<form method="post" action="{{ url_for('add_user') }}" class="row g-2">
+  <div class="col-md-4"><input type="text" name="new_username" class="form-control form-control-sm" placeholder="Benutzername" required></div>
+  <div class="col-md-4"><input type="password" name="new_password" class="form-control form-control-sm" placeholder="Passwort" required></div>
+  <div class="col-md-2"><button class="btn btn-sm btn-outline-primary">Anlegen</button></div>
+</form>
+{% endblock %}

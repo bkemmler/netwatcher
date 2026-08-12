@@ -1,0 +1,153 @@
+# Netwatcher
+
+Netzwerk-Geräte-Scanner für den Einsatz in einem Proxmox-LXC (Debian 13 / Trixie).
+Scanned alle 5 Minuten das lokale Netzwerk nach neuen Geräten (`arp-scan`),
+führt stündlich Detail-Scans (`nmap -O -sV`) durch, speichert alles in SQLite
+und bietet eine Web-UI zur Ansage/Suche/Filter/Export sowie Konfiguration.
+Neu gefundene Geräte lösen eine Gotify-Benachrichtigung aus.
+
+## Voraussetzungen (im LXC)
+
+- Debian 13 (Trixie) – Python 3.12+
+- `arp-scan`, `nmap`, `sudo` (Container braucht `CAP_NET_RAW`)
+- `python3-venv`
+
+```sh
+apt update
+apt install -y python3-venv python3-pip arp-scan nmap sudo
+```
+
+> LXC muss `CAP_NET_RAW` erlaubt haben, sonst kann `arp-scan` keine Layer-2-
+> Pakete senden. In der Proxmox-Konfiguration des Containers (`/etc/pve/lxc/CTID.conf`)
+> sicherstellen, dass kein `lxc.cap.drop` `net_raw` enthält. Unprivileged
+> Container benötigen zusätzlich `/dev/net/just_network_access` – meist
+> reicht `CAP_NET_RAW` bis `25` verfügbar.
+
+## Installation
+
+```sh
+# als root im LXC
+useradd --system --create-home --home-dir /opt/netwatcher netwatcher
+sudo -u netwatcher git clone <repo-url> /opt/netwatcher/app
+# oder lokal kopieren.
+
+sudo -u netwatcher bash -lc '
+  cd /opt/netwatcher/app
+  python3 -m venv .venv
+  .venv/bin/pip install -r requirements.txt
+'
+```
+
+## Setup
+
+```sh
+export NETWATCHER_DB=/opt/netwatcher/data/netwatcher.db
+export NETWATCHER_SECRET="$(openssl rand -hex 32)"   # Session-Secret
+sudo -u netwatcher bash -lc "
+  export NETWATCHER_DB=$NETWATCHER_DB
+  cd /opt/netwatcher/app
+  .venv/bin/python -m netwatcher init-db
+  .venv/bin/python -m netwatcher add-user admin      # fragt interaktiv nach Passwort
+"
+```
+
+Erstkontrolle in der Web-UI: DataBase liegt in `~/.netwatcher` bzw. ist
+über `NETWATCHER_DB` frei wählbar. Immer `NETWATCHER_DB` und
+`NETWATCHER_SECRET` als Umgebungsvariable setzen (systemd-Unit).
+
+## systemd-Units einrichten
+
+Die Templates in `scripts/` enthalten Platzhalter (z.B. `__NETWATCHER_USER__`).
+Folgende Werte setzen:
+
+| Platzhalter | Beispiel |
+|---|---|
+| `__NETWATCHER_USER__` | `netwatcher` |
+| `__NETWATCHER_DIR__` | `/opt/netwatcher/app` |
+| `__NETWATCHER_DB__` | `/opt/netwatcher/data/netwatcher.db` |
+| `__NETWATCHER_DB_DIR__` | `/opt/netwatcher/data` |
+| `__NETWATCHER_BIN__` | `/opt/netwatcher/app/.venv/bin/python -m netwatcher` |
+| `__GUNICORN_BIN__` | `/opt/netwatcher/app/.venv/bin/gunicorn` |
+| `__NETWATCHER_SECRET__` | `<Secret aus Step Setup>` |
+| `__WEB_BIND__` | `0.0.0.0` |
+| `__WEB_PORT__` | `5000` |
+
+```sh
+# Platzhalter via sed ersetzen (Beispiel: SERVICEFILE ersetzen)
+SUD_BIN="/opt/netwatcher/app/.venv/bin/python -m netwatcher"
+for f in scripts/netwatcher-*.service; do
+  sed -e "s|__NETWATCHER_USER__|netwatcher|g" \
+      -e "s|__NETWATCHER_DIR__|/opt/netwatcher/app|g" \
+      -e "s|__NETWATCHER_DB__|/opt/netwatcher/data/netwatcher.db|g" \
+      -e "s|__NETWATCHER_DB_DIR__|/opt/netwatcher/data|g" \
+      -e "s|__NETWATCHER_BIN__|$SUD_BIN|g" \
+      -e "s|__GUNICORN_BIN__|/opt/netwatcher/app/.venv/bin/gunicorn|g" \
+      -e "s|__NETWATCHER_SECRET__|$NETWATCHER_SECRET|g" \
+      -e "s|__WEB_BIND__|0.0.0.0|g" \
+      -e "s|__WEB_PORT__|5000|g" \
+      $f > /etc/systemd/system/$(basename $f)
+done
+
+cp scripts/netwatcher-*.timer /etc/systemd/system/
+
+systemctl daemon-reload
+mkdir -p /opt/netwatcher/data
+chown -R netwatcher:netwatcher /opt/netwatcher/data
+systemctl enable --now netwatcher-web.service
+systemctl enable --now netwatcher-scan.timer
+systemctl enable --now netwatcher-detail.timer
+```
+
+## Bedienung
+
+- **Web-UI**: `http://<lxc-ip>:5000/`
+- Login mit angelegtem Benutzer
+- Geräte: suchen/filtern/sortieren, einzeln anklicken für Details &
+  Bearbeiten (Name/Notizen/als bekannt markieren)
+- Export: CSV/JSON über Buttons in der Geräte-Liste
+- Konfiguration: IP-Bereich, Interface, Scan-Intervall, Gotify-URL/Token,
+  Benutzer verwalten, Test-Nachricht senden
+- "Jetzt scannen" triggert arp-Scan manuell (Web-UI)
+- nmap-Detail-Scan wird einmal pro Stunde vom `netwatcher-detail.timer`
+  für alle bekannten Geräte ausgeführt
+
+Die beiden systemd-Scan-Units laufen als `root`, da `arp-scan` und die
+nmap-OS-Erkennung erhöhte Netzwerkrechte benötigen. Die Web-UI läuft weiterhin
+unter dem unprivilegierten Benutzer `netwatcher`.
+
+## CLI-Kommandos
+
+```sh
+python -m netwatcher init-db              # DB initialisieren
+python -m netwatcher add-user <name>     # Web-UI User anlegen
+python -m netwatcher scan                # arp-Scan jetzt (wie timer)
+python -m netwatcher detail-scan         # nmap-Detail für alle Geräte
+python -m netwatcher serve               # Flask dev-server (nur Test)
+```
+
+## Tests
+
+```sh
+.venv/bin/pip install pytest
+.venv/bin/python -m pytest tests/ -v
+```
+
+Tests laufen vollständig offline (arp-scan-Fixtures statt Echt-Scans,
+Gotify-Endpoint wird gemockt).
+
+## Datenbank-Schema
+
+Siehe `netwatcher/db.py`. Die Tabellen:
+- `devices`: alle jemals gefundenen Geräte (eindeutig über MAC)
+- `scan_history`: jeder Scan-Eintrag pro Gerät + Typ (`arp`/`detail`)
+- `config`: Key/Value-Konfig (in Web-UI editierbar)
+- `users`: Web-UI-Logins (bcrypt-Hashes)
+
+## Gotify
+
+In der Web-UI unter *Konfiguration*:
+- `Gotify Server URL` (z.B. `https://gotify.example.com`)
+- `App Token` (Gotify-App-Token, nicht Client-Token!)
+- "Test-Nachricht senden" prüft die Verbindung
+
+Bei neu gefundenen Geräten wird eine Nachricht mit IP/MAC/Hersteller versandt.

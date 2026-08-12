@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Netwatcher nmap detail scan every 6 hours
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=6h
+AccuracySec=60s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

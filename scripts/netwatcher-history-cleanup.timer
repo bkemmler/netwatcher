@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Netwatcher history cleanup daily
+
+[Timer]
+OnCalendar=*-*-* 03:15:00
+AccuracySec=5m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

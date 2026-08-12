@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nmaprun scanner="nmap" args="nmap -O -sV -oX - 192.168.1.20" start="1700000000">
+  <host>
+    <status state="up" reason="arp-response"/>
+    <address addr="192.168.1.20" addrtype="ipv4"/>
+    <address addr="AA:BB:CC:DD:EE:FF" addrtype="mac" vendor="Apple, Inc."/>
+    <hostnames>
+      <hostname name="iphone.local" type="PTR"/>
+    </hostnames>
+    <ports>
+      <port protocol="tcp" portid="22"><state state="open"/><service name="ssh" product="OpenSSH" version="9.2"/></port>
+      <port protocol="tcp" portid="80"><state state="closed"/><service name="http"/></port>
+      <port protocol="tcp" portid="443"><state state="open"/><service name="https" product="nginx" version="1.25"/></port>
+    </ports>
+    <os>
+      <osmatch name="Apple iOS 17" accuracy="98"/>
+      <osmatch name="Apple macOS 14" accuracy="50"/>
+    </os>
+    <hostscript>
+      <script id="http-title" output="Site title: Mein Ger&#xe4;t"></script>
+      <script id="ssl-cert" output="Subject: CN=example.com&#xa;Issuer: CN=Let's Encrypt&#xa;Not valid before: 2024-01-01&#xa;Not valid after: 2025-01-01"/>
+      <script id="upnp-info" output="Server: Linux/2.6 UPnP/1.0 MiniUPnPd/2.0"/>
+    </hostscript>
+  </host>
+</nmaprun>
