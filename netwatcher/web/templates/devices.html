@@ -9,7 +9,7 @@
         Spalten
       </button>
       <ul class="dropdown-menu" id="col-selector">
-         {% for col, label in [('ip','IP'),('mac','MAC'),('hostname','Hostname'),('vendor','Hersteller'),('name','Name'),('status','Status'),('notes','Notizen'),('first_seen','Erstmals gesehen'),('last_seen','Zuletzt gesehen')] %}
+         {% for col, label in [('ip','IP'),('mac','MAC'),('hostname','Hostname'),('vendor','Hersteller'),('name','Name'),('status','Status'),('notes','Notizen'),('first_seen','Erstmals gesehen'),('last_seen','Zuletzt gesehen'),('opnsense_ipv6','OPNsense IPv6')] %}
         <li>
           <label class="dropdown-item d-flex align-items-center gap-2">
             <input type="checkbox" data-col="{{ col }}"> {{ label }}
@@ -95,6 +95,7 @@
           <th data-col="notes">Notizen</th>
           <th data-col="first_seen">Erstmals gesehen</th>
           <th data-col="last_seen">Zuletzt gesehen</th>
+          <th data-col="opnsense_ipv6">OPNsense IPv6</th>
         </tr>
       </thead>
       <tbody>
@@ -132,9 +133,10 @@
           </td>
           <td data-col="first_seen"><small>{{ format_date(d.first_seen) }}</small></td>
           <td data-col="last_seen"><small>{{ format_date(d.last_seen) }}</small></td>
+          <td data-col="opnsense_ipv6"><code>{{ format_ips(d.opnsense_ipv6) or '—' }}</code></td>
         </tr>
         {% else %}
-        <tr><td colspan="9" class="text-center text-muted">Keine Geräte gefunden.</td></tr>
+        <tr><td colspan="10" class="text-center text-muted">Keine Geräte gefunden.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -181,6 +183,7 @@
   if (colState.notes === undefined) {
     colState.notes = false;
     colState.last_seen = false;
+    colState.opnsense_ipv6 = false;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(colState));
   }
   applyVisibility();
