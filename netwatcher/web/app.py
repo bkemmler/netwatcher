@@ -41,7 +41,12 @@ def create_app() -> Flask:
     @app.context_processor
     def inject_version():
         from .. import __version__
-        return {"netwatcher_version": __version__}
+        return {
+            "netwatcher_version": __version__,
+            "remote_integrations_enabled": os.environ.get(
+                "NETWATCHER_REMOTE_INTEGRATIONS", "0"
+            ) == "1",
+        }
 
     @app.context_processor
     def inject_format_date():
@@ -393,10 +398,13 @@ def create_app() -> Flask:
                 "timezone",
                 "opnsense_url", "opnsense_api_key", "opnsense_api_secret",
                 "opnsense_timeout",
-                "arpwatch_path", "librenms_url", "librenms_token",
-                "librenms_timeout", "greenbone_report_url",
-                "greenbone_username", "greenbone_password", "greenbone_timeout",
             ]
+            if os.environ.get("NETWATCHER_REMOTE_INTEGRATIONS", "0") == "1":
+                keys += [
+                    "arpwatch_path", "librenms_url", "librenms_token",
+                    "librenms_timeout", "greenbone_report_url",
+                    "greenbone_username", "greenbone_password", "greenbone_timeout",
+                ]
             for k in keys:
                 val = request.form.get(k, "")
                 if val is not None:
@@ -413,11 +421,12 @@ def create_app() -> Flask:
                 db.set_config(ck, checkbox(ck), DB_PATH)
             db.set_config("opnsense_enabled", checkbox("opnsense_enabled"), DB_PATH)
             db.set_config("opnsense_verify_tls", checkbox("opnsense_verify_tls"), DB_PATH)
-            db.set_config("arpwatch_enabled", checkbox("arpwatch_enabled"), DB_PATH)
-            db.set_config("librenms_enabled", checkbox("librenms_enabled"), DB_PATH)
-            db.set_config("librenms_verify_tls", checkbox("librenms_verify_tls"), DB_PATH)
-            db.set_config("greenbone_enabled", checkbox("greenbone_enabled"), DB_PATH)
-            db.set_config("greenbone_verify_tls", checkbox("greenbone_verify_tls"), DB_PATH)
+            if os.environ.get("NETWATCHER_REMOTE_INTEGRATIONS", "0") == "1":
+                db.set_config("arpwatch_enabled", checkbox("arpwatch_enabled"), DB_PATH)
+                db.set_config("librenms_enabled", checkbox("librenms_enabled"), DB_PATH)
+                db.set_config("librenms_verify_tls", checkbox("librenms_verify_tls"), DB_PATH)
+                db.set_config("greenbone_enabled", checkbox("greenbone_enabled"), DB_PATH)
+                db.set_config("greenbone_verify_tls", checkbox("greenbone_verify_tls"), DB_PATH)
             if request.form.get("test_gotify"):
                 ok = notifications.send(
                     title="Netwatcher Test",
@@ -586,6 +595,9 @@ def create_app() -> Flask:
     @login_required
     def integrations_sync():
         try:
+            if os.environ.get("NETWATCHER_REMOTE_INTEGRATIONS", "0") != "1":
+                flash("LibreNMS/Greenbone-Integrationen sind serverseitig deaktiviert", "warning")
+                return redirect(url_for("config_page"))
             counts = scanner.sync_external_integrations(DB_PATH)
             flash("Integrationen synchronisiert: " + ", ".join(
                 f"{key}={value}" for key, value in counts.items()

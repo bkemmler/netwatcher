@@ -31,6 +31,7 @@ NETWATCHER_DB="${NETWATCHER_DB:-$NETWATCHER_HOME/data/netwatcher.db}"
 NETWATCHER_DB_DIR="$(dirname "$NETWATCHER_DB")"
 WEB_BIND="${WEB_BIND:-0.0.0.0}"
 WEB_PORT="${WEB_PORT:-5000}"
+NETWATCHER_REMOTE_INTEGRATIONS="${NETWATCHER_REMOTE_INTEGRATIONS:-0}"
 # Pfad zum Repo-Checkout mit diesem installer (für sed-Templates):
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -107,7 +108,8 @@ if [[ "${1:-}" == "--update" ]]; then
       -e "s|__GUNICORN_BIN__|$GUNICORN_BIN|g" \
       -e "s|__NETWATCHER_SECRET__|$SECRET|g" \
       -e "s|__WEB_BIND__|$WEB_BIND|g" \
-      -e "s|__WEB_PORT__|$WEB_PORT|g" \
+    -e "s|__WEB_PORT__|$WEB_PORT|g" \
+      -e "s|__NETWATCHER_REMOTE_INTEGRATIONS__|$NETWATCHER_REMOTE_INTEGRATIONS|g" \
       "$src" > "$dst"
   }
   # Repo-Dateien kopieren
@@ -302,6 +304,7 @@ fill() {
     -e "s|__NETWATCHER_SECRET__|$SECRET|g" \
     -e "s|__WEB_BIND__|$WEB_BIND|g" \
     -e "s|__WEB_PORT__|$WEB_PORT|g" \
+    -e "s|__NETWATCHER_REMOTE_INTEGRATIONS__|$NETWATCHER_REMOTE_INTEGRATIONS|g" \
     "$src" > "$dst"
 }
 

@@ -657,7 +657,9 @@ def sync_external_integrations(db_path: str | None = None) -> dict[str, int]:
                 merged.setdefault(device["id"], {})["arpwatch"] = data
                 counts["arpwatch"] += 1
 
-    if cfg.get("librenms_enabled") == "1":
+    remote_enabled = os.environ.get("NETWATCHER_REMOTE_INTEGRATIONS", "0") == "1"
+
+    if remote_enabled and cfg.get("librenms_enabled") == "1":
         rows = integrations.fetch_librenms(
             cfg.get("librenms_url", ""), cfg.get("librenms_token", ""),
             cfg.get("librenms_verify_tls", "1") == "1",
@@ -670,7 +672,7 @@ def sync_external_integrations(db_path: str | None = None) -> dict[str, int]:
                 merged.setdefault(device["id"], {})["librenms"] = row
                 counts["librenms"] += 1
 
-    if cfg.get("greenbone_enabled") == "1":
+    if remote_enabled and cfg.get("greenbone_enabled") == "1":
         report = integrations.fetch_greenbone_report(
             cfg.get("greenbone_report_url", ""),
             cfg.get("greenbone_username", ""), cfg.get("greenbone_password", ""),

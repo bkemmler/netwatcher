@@ -133,6 +133,7 @@ systemctl enable --now netwatcher-detail.timer
 - Export: CSV/JSON über Buttons in der Geräte-Liste
 - Konfiguration: IP-Bereich, Interface, Scan-Intervall, Detail-Scan alle 6h, DNS/mDNS/IPv6/HTTP/TLS/UPnP/SMB aktivieren, Gotify, OPNsense-Sync, Datumsformat
 - Externe Integrationen: arpwatch (`/var/lib/arpwatch/arp.dat`), LibreNMS REST-API und Greenbone-Report-URL; alle sind optional und über die Konfiguration synchronisierbar
+- LibreNMS und Greenbone sind standardmäßig ausgeblendet. Aktivierung erfolgt serverseitig mit `NETWATCHER_REMOTE_INTEGRATIONS=1` beim Installer beziehungsweise beim systemd-Update.
 - "Jetzt scannen" / "Detail-Scan" triggert manuelle Scans
 - Scan-Profile: Schnellscan, Detailscan und Vollscan (alle Ports) über die Geräteliste
 - OPNsense-Dnsmasq-Integration: statische DHCP-Hosts über API auslesen und MAC-abgleichen

@@ -9,6 +9,7 @@ User=root
 WorkingDirectory=__NETWATCHER_DIR__
 Environment="NETWATCHER_DB=__NETWATCHER_DB__"
 Environment="NETWATCHER_CACHE_DIR=__NETWATCHER_DB_DIR__/cache"
+Environment="NETWATCHER_REMOTE_INTEGRATIONS=__NETWATCHER_REMOTE_INTEGRATIONS__"
 Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 ExecStart=__NETWATCHER_BIN__ detail-scan
 
