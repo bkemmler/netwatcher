@@ -45,7 +45,18 @@ def create_app() -> Flask:
 
     @app.context_processor
     def inject_format_date():
-        from datetime import datetime, timezone as tz
+        from datetime import datetime, timedelta, timezone as tz
+
+        def _stale(iso: str | None) -> bool:
+            if not iso:
+                return False
+            try:
+                dt = datetime.fromisoformat(
+                    iso.replace("Z", "+00:00").split("+")[0].split("[")[0]
+                ).replace(tzinfo=tz.utc)
+                return datetime.now(tz.utc) - dt > timedelta(hours=24)
+            except ValueError:
+                return False
 
         def _fmt(iso: str | None, fallback: str = "—") -> str:
             if not iso:
@@ -75,7 +86,7 @@ def create_app() -> Flask:
             except (_json.JSONDecodeError, TypeError):
                 return str(raw)
 
-        return {"format_date": _fmt, "format_ips": _ips}
+        return {"format_date": _fmt, "format_ips": _ips, "is_stale": _stale}
 
     @app.context_processor
     def inject_render_detail():
