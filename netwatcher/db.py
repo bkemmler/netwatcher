@@ -27,6 +27,7 @@ DEFAULT_CONFIG = {
     "web_bind_port": "5000",
     "oui_refresh_days": "30",
     "date_format": "de",
+    "timezone": "Europe/Berlin",
     "opnsense_enabled": "0",
     "opnsense_url": "",
     "opnsense_api_key": "",

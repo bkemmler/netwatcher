@@ -45,14 +45,18 @@ def create_app() -> Flask:
 
     @app.context_processor
     def inject_format_date():
-        from datetime import datetime
+        from datetime import datetime, timezone as tz
 
         def _fmt(iso: str | None, fallback: str = "—") -> str:
             if not iso:
                 return fallback
             try:
                 dt = datetime.fromisoformat(iso.replace("Z", "+00:00").split("+")[0].split("[")[0])
-            except ValueError:
+                dt = dt.replace(tzinfo=tz.utc)
+                tz_name = db.get_config(DB_PATH).get("timezone", "Europe/Berlin")
+                from zoneinfo import ZoneInfo
+                dt = dt.astimezone(ZoneInfo(tz_name))
+            except (ValueError, Exception):
                 return iso[:19] if len(iso) >= 19 else iso
             fmt_key = db.get_config(DB_PATH).get("date_format", "de")
             if fmt_key == "de":
@@ -368,6 +372,7 @@ def create_app() -> Flask:
                 "detail_scan_interval_hours",
                 "gotify_url", "gotify_token", "web_bind_host", "web_bind_port",
                 "date_format",
+                "timezone",
                 "opnsense_url", "opnsense_api_key", "opnsense_api_secret",
                 "opnsense_timeout",
             ]

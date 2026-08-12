@@ -138,6 +138,14 @@
           <option value="en" {% if cfg.get('date_format','de') == 'en' %}selected{% endif %}>English (2026-01-31 14:30)</option>
         </select>
       </div>
+      <div class="col-md-3">
+        <label class="form-label">Zeitzone</label>
+        <select name="timezone" class="form-select">
+          {% for tz in ['Europe/Berlin','Europe/Vienna','Europe/Zurich','Europe/London','Europe/Moscow','Asia/Tokyo','America/New_York','America/Chicago','America/Denver','America/Los_Angeles','UTC'] %}
+            <option value="{{ tz }}" {% if cfg.get('timezone','Europe/Berlin') == tz %}selected{% endif %}>{{ tz }}</option>
+          {% endfor %}
+        </select>
+      </div>
     </div>
   </div>
 
