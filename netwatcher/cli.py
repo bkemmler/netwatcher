@@ -61,6 +61,14 @@ def cmd_opnsense_sync(args: argparse.Namespace) -> None:
     print(f"OPNsense-Sync: {synced} Geräte synchronisiert.")
 
 
+def cmd_profile_scan(args: argparse.Namespace) -> None:
+    summary = scanner.run_profile_scan(args.profile, args.ip, args.db)
+    print(
+        f"{scanner.SCAN_PROFILES[args.profile]}: "
+        f"{summary['updated']} von {summary['scanned']} Geräten aktualisiert."
+    )
+
+
 def cmd_serve(args: argparse.Namespace) -> None:
     """Run development server (use gunicorn in production)."""
     from .web.app import create_app
@@ -99,6 +107,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     sp = sub.add_parser("opnsense-sync", help="OPNsense Dnsmasq Hosts synchronisieren")
     sp.set_defaults(func=cmd_opnsense_sync)
+
+    sp = sub.add_parser("profile-scan", help="Nmap-Scanprofil ausführen")
+    sp.add_argument("--profile", choices=sorted(scanner.SCAN_PROFILES), default="detail")
+    sp.add_argument("--ip", default=None, help="Nur diese IPv4-Adresse scannen")
+    sp.set_defaults(func=cmd_profile_scan)
 
     sp = sub.add_parser("serve", help="Flask dev-server starten")
     sp.add_argument("--host", default=None)

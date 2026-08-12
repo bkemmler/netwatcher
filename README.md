@@ -133,6 +133,7 @@ systemctl enable --now netwatcher-detail.timer
 - Export: CSV/JSON über Buttons in der Geräte-Liste
 - Konfiguration: IP-Bereich, Interface, Scan-Intervall, Detail-Scan alle 6h, DNS/mDNS/IPv6/HTTP/TLS/UPnP/SMB aktivieren, Gotify, OPNsense-Sync, Datumsformat
 - "Jetzt scannen" / "Detail-Scan" triggert manuelle Scans
+- Scan-Profile: Schnellscan, Detailscan und Vollscan (alle Ports) über die Geräteliste
 - OPNsense-Dnsmasq-Integration: statische DHCP-Hosts über API auslesen und MAC-abgleichen
 
 ## CLI-Kommandos
@@ -144,6 +145,9 @@ python -m netwatcher scan                # arp-Scan jetzt (wie timer)
 python -m netwatcher detail-scan         # nmap-Detail für alle Geräte
 python -m netwatcher cleanup-history     # Verlaufseinträge vom Vortag löschen
 python -m netwatcher opnsense-sync       # OPNsense Dnsmasq-Hosts synchronisieren
+python -m netwatcher profile-scan --profile quick   # Top-20-Ports
+python -m netwatcher profile-scan --profile detail  # OS und Dienste
+python -m netwatcher profile-scan --profile full    # alle TCP-Ports
 python -m netwatcher serve               # Flask dev-server (nur Test)
 ```
 

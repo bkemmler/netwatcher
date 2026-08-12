@@ -497,6 +497,30 @@ def create_app() -> Flask:
             flash(f"Detail-Scan-Start fehlgeschlagen: {exc}", "error")
         return redirect(url_for("devices"))
 
+    @app.route("/profile-scan-now", methods=["POST"])
+    @login_required
+    def profile_scan_now():
+        import subprocess
+        import sys
+
+        profile = request.form.get("profile", "detail")
+        if profile not in scanner.SCAN_PROFILES:
+            flash("Unbekanntes Scan-Profil", "error")
+            return redirect(url_for("devices"))
+        env = os.environ.copy()
+        env["NETWATCHER_DB"] = DB_PATH or ""
+        env["PATH"] = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+        try:
+            subprocess.Popen(
+                [sys.executable, "-m", "netwatcher", "profile-scan", "--profile", profile],
+                env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                stdin=subprocess.DEVNULL, start_new_session=True,
+            )
+            flash(f"{scanner.SCAN_PROFILES[profile]} im Hintergrund gestartet", "success")
+        except Exception as exc:
+            flash(f"Scan-Start fehlgeschlagen: {exc}", "error")
+        return redirect(url_for("devices"))
+
     @app.route("/config/cleanup-history", methods=["POST"])
     @login_required
     def cleanup_history():

@@ -148,7 +148,7 @@
     <thead><tr><th>Zeit</th><th>Typ</th><th>IP</th></tr></thead>
     <tbody>
       {% for h in history %}
-      <tr><td><small>{{ format_date(h.ts) }}</small></td><td>{{ h.scan_type }}</td><td><code>{{ h.ip or '—' }}</code></td></tr>
+      <tr><td><small>{{ format_date(h.ts) }}</small></td><td>{{ {'arp':'ARP-Scan','detail':'Detailscan','profile:quick':'Schnellscan','profile:detail':'Detailscan','profile:full':'Vollscan'}.get(h.scan_type, h.scan_type) }}</td><td><code>{{ h.ip or '—' }}</code></td></tr>
       {% else %}
       <tr><td colspan="3" class="text-muted text-center">keine Einträge</td></tr>
       {% endfor %}

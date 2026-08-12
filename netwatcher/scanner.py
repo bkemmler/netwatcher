@@ -196,6 +196,81 @@ def run_nmap_detail(ip: str) -> DetailResult | None:
         return None
 
 
+SCAN_PROFILES = {
+    "quick": "Schnellscan",
+    "detail": "Detailscan",
+    "full": "Vollscan",
+}
+
+
+def run_nmap_profile(ip: str, profile: str) -> DetailResult | None:
+    """Run one of the supported nmap profiles against a single IP."""
+    nmap_bin = _which("nmap")
+    if nmap_bin is None or profile not in SCAN_PROFILES:
+        return None
+
+    if profile == "quick":
+        args = ["-sV", "--top-ports", "20"]
+    elif profile == "full":
+        args = ["-O", "-sV", "-p-", "--version-light",
+                "--script", "http-title,ssl-cert,upnp-info,nbstat,smb-os-discovery"]
+    else:
+        args = ["-O", "-sV", "-T4", "--version-light",
+                "--script", "http-title,ssl-cert,upnp-info,nbstat,smb-os-discovery"]
+
+    cmd = [nmap_bin, *args, "-oX", "-", "-Pn", ip]
+    if not _is_root():
+        cmd.insert(0, "sudo")
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True,
+                              check=False, timeout=900 if profile == "full" else 180)
+    except subprocess.TimeoutExpired:
+        return None
+    if proc.returncode != 0:
+        return None
+    try:
+        return parse_nmap_xml(proc.stdout)
+    except Exception:
+        return None
+
+
+def run_profile_scan(profile: str, ip: str | None = None,
+                     db_path: str | None = None) -> dict[str, Any]:
+    """Run a profile for one IP or all known devices and record its history."""
+    if profile not in SCAN_PROFILES:
+        raise ValueError(f"Unbekanntes Scan-Profil: {profile}")
+    devices = db.all_devices(db_path)
+    if ip:
+        devices = [d for d in devices if d.get("ip_last") == ip]
+
+    scanned = 0
+    updated = 0
+    now = now_iso()
+    for device in devices:
+        target = device.get("ip_last")
+        if not target:
+            continue
+        scanned += 1
+        result = run_nmap_profile(target, profile)
+        if result is None:
+            continue
+        db.update_device_detail(
+            device_id=device["id"], os_info=result.os_info,
+            services=result.services, hostname=result.hostname, now_iso=now,
+            http_info=result.http_info, tls_info=result.tls_info,
+            network_info=result.network_info, db_path=db_path,
+        )
+        with db.connect(db_path) as conn:
+            conn.execute(
+                "INSERT INTO scan_history(device_id, ts, scan_type, ip, raw) "
+                "VALUES(?,?,?,?,?)",
+                (device["id"], now, f"profile:{profile}", target, None),
+            )
+        updated += 1
+    return {"profile": profile, "scanned": scanned, "updated": updated,
+            "timestamp": now}
+
+
 # --- DNS / mDNS / IPv6 ---
 
 
