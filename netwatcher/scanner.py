@@ -616,7 +616,9 @@ def run_detail_scan_for_all(db_path: str | None = None) -> dict[str, Any]:
         except Exception:
             pass
 
-    return {"scanned": scanned, "updated": updated, "timestamp": now}
+    external = sync_external_integrations(db_path)
+    return {"scanned": scanned, "updated": updated, "external": external,
+            "timestamp": now}
 
 
 def sync_opnsense(db_path: str | None = None) -> int:
@@ -634,6 +636,62 @@ def sync_opnsense(db_path: str | None = None) -> int:
     tout = float(cfg.get("opnsense_timeout", "10") or "10")
     now = now_iso()
     return _sync_opnsense_data(url, key, secret, verify, tout, now, db_path)
+
+
+def sync_external_integrations(db_path: str | None = None) -> dict[str, int]:
+    """Synchronize enabled arpwatch, LibreNMS and Greenbone sources."""
+    from . import integrations
+
+    cfg = db.get_config(db_path)
+    devices = db.all_devices(db_path)
+    by_mac = {d["mac"]: d for d in devices if d.get("mac")}
+    by_ip = {d["ip_last"]: d for d in devices if d.get("ip_last")}
+    merged: dict[int, dict[str, Any]] = {}
+    now = now_iso()
+    counts = {"arpwatch": 0, "librenms": 0, "greenbone": 0}
+
+    if cfg.get("arpwatch_enabled") == "1":
+        for mac, data in integrations.read_arpwatch(cfg.get("arpwatch_path", "")).items():
+            device = by_mac.get(mac)
+            if device:
+                merged.setdefault(device["id"], {})["arpwatch"] = data
+                counts["arpwatch"] += 1
+
+    if cfg.get("librenms_enabled") == "1":
+        rows = integrations.fetch_librenms(
+            cfg.get("librenms_url", ""), cfg.get("librenms_token", ""),
+            cfg.get("librenms_verify_tls", "1") == "1",
+            float(cfg.get("librenms_timeout", "10") or "10"),
+        )
+        for row in rows:
+            ip = str(row.get("ip", row.get("ip_address", "")))
+            device = by_ip.get(ip)
+            if device:
+                merged.setdefault(device["id"], {})["librenms"] = row
+                counts["librenms"] += 1
+
+    if cfg.get("greenbone_enabled") == "1":
+        report = integrations.fetch_greenbone_report(
+            cfg.get("greenbone_report_url", ""),
+            cfg.get("greenbone_username", ""), cfg.get("greenbone_password", ""),
+            cfg.get("greenbone_verify_tls", "1") == "1",
+            float(cfg.get("greenbone_timeout", "30") or "30"),
+        )
+        # Generated reports often contain a host list; map those by IP.
+        hosts = report.get("hosts", report.get("results", []))
+        if isinstance(hosts, list):
+            for row in hosts:
+                if not isinstance(row, dict):
+                    continue
+                ip = str(row.get("ip", row.get("host", "")))
+                device = by_ip.get(ip)
+                if device:
+                    merged.setdefault(device["id"], {})["greenbone"] = row
+                    counts["greenbone"] += 1
+
+    for device_id, info in merged.items():
+        db.update_device_external(device_id, integrations.encode(info), now, db_path)
+    return counts
 
 
 def _sync_opnsense_data(

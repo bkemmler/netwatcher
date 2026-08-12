@@ -132,6 +132,7 @@ systemctl enable --now netwatcher-detail.timer
 - Geräte: suchen/filtern/sortieren, Spalten ein-/ausblenden, inline bearbeiten (Name/Status/Notizen)
 - Export: CSV/JSON über Buttons in der Geräte-Liste
 - Konfiguration: IP-Bereich, Interface, Scan-Intervall, Detail-Scan alle 6h, DNS/mDNS/IPv6/HTTP/TLS/UPnP/SMB aktivieren, Gotify, OPNsense-Sync, Datumsformat
+- Externe Integrationen: arpwatch (`/var/lib/arpwatch/arp.dat`), LibreNMS REST-API und Greenbone-Report-URL; alle sind optional und über die Konfiguration synchronisierbar
 - "Jetzt scannen" / "Detail-Scan" triggert manuelle Scans
 - Scan-Profile: Schnellscan, Detailscan und Vollscan (alle Ports) über die Geräteliste
 - OPNsense-Dnsmasq-Integration: statische DHCP-Hosts über API auslesen und MAC-abgleichen
@@ -148,6 +149,7 @@ python -m netwatcher opnsense-sync       # OPNsense Dnsmasq-Hosts synchronisiere
 python -m netwatcher profile-scan --profile quick   # Top-20-Ports
 python -m netwatcher profile-scan --profile detail  # OS und Dienste
 python -m netwatcher profile-scan --profile full    # alle TCP-Ports
+python -m netwatcher integrations-sync              # arpwatch, LibreNMS, Greenbone
 python -m netwatcher serve               # Flask dev-server (nur Test)
 ```
 

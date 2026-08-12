@@ -2,11 +2,12 @@
 from __future__ import annotations
 
 import sqlite3
+import json
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterable
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 DEFAULT_CONFIG = {
     "scan_range": "192.168.1.0/24",
@@ -34,6 +35,19 @@ DEFAULT_CONFIG = {
     "opnsense_api_secret": "",
     "opnsense_verify_tls": "1",
     "opnsense_timeout": "10",
+    "arpwatch_enabled": "0",
+    "arpwatch_path": "/var/lib/arpwatch/arp.dat",
+    "librenms_enabled": "0",
+    "librenms_url": "",
+    "librenms_token": "",
+    "librenms_verify_tls": "1",
+    "librenms_timeout": "10",
+    "greenbone_enabled": "0",
+    "greenbone_report_url": "",
+    "greenbone_username": "",
+    "greenbone_password": "",
+    "greenbone_verify_tls": "1",
+    "greenbone_timeout": "30",
 }
 
 _SCHEMA = """
@@ -62,6 +76,8 @@ CREATE TABLE IF NOT EXISTS devices (
     opnsense_ipv6 TEXT,
     opnsense_description TEXT,
     opnsense_last_sync TEXT,
+    external_info TEXT,
+    external_last_sync TEXT,
     last_detail_scan TEXT
 );
 
@@ -108,6 +124,11 @@ _V3_MIGRATIONS = [
     "ALTER TABLE devices ADD COLUMN opnsense_last_sync TEXT",
 ]
 
+_V4_MIGRATIONS = [
+    "ALTER TABLE devices ADD COLUMN external_info TEXT",
+    "ALTER TABLE devices ADD COLUMN external_last_sync TEXT",
+]
+
 
 def get_db_path(override: str | None = None) -> Path:
     if override:
@@ -137,6 +158,14 @@ def _migrate(conn: sqlite3.Connection, target: int) -> None:
             except sqlite3.OperationalError:
                 pass
         conn.execute("PRAGMA user_version = 3")
+        cur_ver = 3
+    if cur_ver < 4 and target >= 4:
+        for sql in _V4_MIGRATIONS:
+            try:
+                conn.execute(sql)
+            except sqlite3.OperationalError:
+                pass
+        conn.execute("PRAGMA user_version = 4")
 
 
 def init_db(db_path: str | None = None) -> Path:
@@ -319,6 +348,33 @@ def update_device_opnsense(
         conn.execute(
             "UPDATE devices SET name=? WHERE id=? AND (name IS NULL OR name='')",
             (hostname, device_id),
+        )
+
+
+def update_device_external(device_id: int, info: str | None,
+                           now_iso: str, db_path: str | None = None) -> None:
+    with connect(db_path) as conn:
+        existing = conn.execute(
+            "SELECT external_info FROM devices WHERE id=?", (device_id,)
+        ).fetchone()
+        merged: dict[str, Any] = {}
+        if existing and existing["external_info"]:
+            try:
+                old = json.loads(existing["external_info"])
+                if isinstance(old, dict):
+                    merged.update(old)
+            except (json.JSONDecodeError, TypeError):
+                pass
+        if info:
+            try:
+                new = json.loads(info)
+                if isinstance(new, dict):
+                    merged.update(new)
+            except (json.JSONDecodeError, TypeError):
+                pass
+        conn.execute(
+            "UPDATE devices SET external_info=?, external_last_sync=? WHERE id=?",
+            (json.dumps(merged, ensure_ascii=False) if merged else None, now_iso, device_id),
         )
 
 

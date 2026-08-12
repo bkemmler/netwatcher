@@ -23,6 +23,72 @@
   </div>
 
   <div class="card mb-3">
+    <div class="card-header">Externe Integrationen</div>
+    <div class="card-body row g-3">
+      <div class="col-12"><strong>arpwatch</strong></div>
+      <div class="col-md-8">
+        <label class="form-label">arpwatch-Datei</label>
+        <input type="text" name="arpwatch_path" class="form-control" value="{{ cfg.get('arpwatch_path','/var/lib/arpwatch/arp.dat') }}">
+      </div>
+      <div class="col-md-4 form-check align-self-end">
+        <input class="form-check-input" type="checkbox" name="arpwatch_enabled" value="1" id="arpwatch_enabled" {% if cfg.get('arpwatch_enabled','0') == '1' %}checked{% endif %}>
+        <label class="form-check-label" for="arpwatch_enabled">aktiv</label>
+      </div>
+
+      <div class="col-12"><strong>LibreNMS</strong></div>
+      <div class="col-md-8">
+        <label class="form-label">API-URL</label>
+        <input type="text" name="librenms_url" class="form-control" value="{{ cfg.get('librenms_url','') }}">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Timeout (s)</label>
+        <input type="number" name="librenms_timeout" class="form-control" value="{{ cfg.get('librenms_timeout','10') }}">
+      </div>
+      <div class="col-md-8">
+        <label class="form-label">API-Token</label>
+        <input type="password" name="librenms_token" class="form-control" value="{{ cfg.get('librenms_token','') }}">
+      </div>
+      <div class="col-md-4 form-check align-self-end">
+        <input class="form-check-input" type="checkbox" name="librenms_enabled" value="1" id="librenms_enabled" {% if cfg.get('librenms_enabled','0') == '1' %}checked{% endif %}>
+        <label class="form-check-label" for="librenms_enabled">LibreNMS aktiv</label>
+      </div>
+      <div class="col-12 form-check">
+        <input class="form-check-input" type="checkbox" name="librenms_verify_tls" value="1" id="librenms_tls" {% if cfg.get('librenms_verify_tls','1') == '1' %}checked{% endif %}>
+        <label class="form-check-label" for="librenms_tls">LibreNMS-TLS-Zertifikat prüfen</label>
+      </div>
+
+      <div class="col-12"><strong>Greenbone</strong></div>
+      <div class="col-md-8">
+        <label class="form-label">Report-URL</label>
+        <input type="text" name="greenbone_report_url" class="form-control" placeholder="https://scanner/report.json" value="{{ cfg.get('greenbone_report_url','') }}">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Timeout (s)</label>
+        <input type="number" name="greenbone_timeout" class="form-control" value="{{ cfg.get('greenbone_timeout','30') }}">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Benutzer</label>
+        <input type="text" name="greenbone_username" class="form-control" value="{{ cfg.get('greenbone_username','') }}">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Passwort</label>
+        <input type="password" name="greenbone_password" class="form-control" value="{{ cfg.get('greenbone_password','') }}">
+      </div>
+      <div class="col-md-6 form-check">
+        <input class="form-check-input" type="checkbox" name="greenbone_enabled" value="1" id="greenbone_enabled" {% if cfg.get('greenbone_enabled','0') == '1' %}checked{% endif %}>
+        <label class="form-check-label" for="greenbone_enabled">Greenbone aktiv</label>
+      </div>
+      <div class="col-md-6 form-check">
+        <input class="form-check-input" type="checkbox" name="greenbone_verify_tls" value="1" id="greenbone_tls" {% if cfg.get('greenbone_verify_tls','1') == '1' %}checked{% endif %}>
+        <label class="form-check-label" for="greenbone_tls">Greenbone-TLS-Zertifikat prüfen</label>
+      </div>
+      <div class="col-12">
+        <button class="btn btn-outline-secondary btn-sm" formaction="{{ url_for('integrations_sync') }}" formmethod="post">Integrationen synchronisieren</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
     <div class="card-header">Detail-Scan (nmap)</div>
     <div class="card-body row g-3">
       <div class="col-12 form-check">

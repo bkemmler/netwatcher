@@ -69,6 +69,13 @@ def cmd_profile_scan(args: argparse.Namespace) -> None:
     )
 
 
+def cmd_integrations_sync(args: argparse.Namespace) -> None:
+    counts = scanner.sync_external_integrations(args.db)
+    print("Integrationen synchronisiert: " + ", ".join(
+        f"{key}={value}" for key, value in counts.items()
+    ))
+
+
 def cmd_serve(args: argparse.Namespace) -> None:
     """Run development server (use gunicorn in production)."""
     from .web.app import create_app
@@ -112,6 +119,9 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--profile", choices=sorted(scanner.SCAN_PROFILES), default="detail")
     sp.add_argument("--ip", default=None, help="Nur diese IPv4-Adresse scannen")
     sp.set_defaults(func=cmd_profile_scan)
+
+    sp = sub.add_parser("integrations-sync", help="arpwatch, LibreNMS und Greenbone synchronisieren")
+    sp.set_defaults(func=cmd_integrations_sync)
 
     sp = sub.add_parser("serve", help="Flask dev-server starten")
     sp.add_argument("--host", default=None)

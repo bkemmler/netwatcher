@@ -183,6 +183,13 @@ def create_app() -> Flask:
                     lines.append("</dd>")
                 lines.append("</dl>")
 
+            elif key == "external":
+                lines.append('<dl class="row mb-0 small">')
+                for source, value in data.items():
+                    rendered = json.dumps(value, ensure_ascii=False) if isinstance(value, (dict, list)) else str(value)
+                    lines.append(f'<dt class="col-sm-3">{source}</dt><dd class="col-sm-9"><code>{rendered}</code></dd>')
+                lines.append("</dl>")
+
             else:
                 return f'<pre class="mb-0 small">{raw[:1000]}</pre>'
 
@@ -386,6 +393,9 @@ def create_app() -> Flask:
                 "timezone",
                 "opnsense_url", "opnsense_api_key", "opnsense_api_secret",
                 "opnsense_timeout",
+                "arpwatch_path", "librenms_url", "librenms_token",
+                "librenms_timeout", "greenbone_report_url",
+                "greenbone_username", "greenbone_password", "greenbone_timeout",
             ]
             for k in keys:
                 val = request.form.get(k, "")
@@ -403,6 +413,11 @@ def create_app() -> Flask:
                 db.set_config(ck, checkbox(ck), DB_PATH)
             db.set_config("opnsense_enabled", checkbox("opnsense_enabled"), DB_PATH)
             db.set_config("opnsense_verify_tls", checkbox("opnsense_verify_tls"), DB_PATH)
+            db.set_config("arpwatch_enabled", checkbox("arpwatch_enabled"), DB_PATH)
+            db.set_config("librenms_enabled", checkbox("librenms_enabled"), DB_PATH)
+            db.set_config("librenms_verify_tls", checkbox("librenms_verify_tls"), DB_PATH)
+            db.set_config("greenbone_enabled", checkbox("greenbone_enabled"), DB_PATH)
+            db.set_config("greenbone_verify_tls", checkbox("greenbone_verify_tls"), DB_PATH)
             if request.form.get("test_gotify"):
                 ok = notifications.send(
                     title="Netwatcher Test",
@@ -565,6 +580,18 @@ def create_app() -> Flask:
                 flash("OPNsense-Sync abgeschlossen — keine neuen Daten zugeordnet. API-URL und Zugangsdaten prüfen.", "warning")
         except Exception as exc:
             flash(f"OPNsense-Sync fehlgeschlagen: {exc}", "error")
+        return redirect(url_for("config_page"))
+
+    @app.route("/config/integrations-sync", methods=["POST"])
+    @login_required
+    def integrations_sync():
+        try:
+            counts = scanner.sync_external_integrations(DB_PATH)
+            flash("Integrationen synchronisiert: " + ", ".join(
+                f"{key}={value}" for key, value in counts.items()
+            ), "success")
+        except Exception as exc:
+            flash(f"Integrations-Sync fehlgeschlagen: {exc}", "error")
         return redirect(url_for("config_page"))
 
     return app

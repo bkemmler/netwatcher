@@ -176,7 +176,7 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get install -y -qq \
   python3-venv python3-pip \
-  arp-scan nmap sudo \
+  arp-scan nmap arpwatch sudo \
   openssl ca-certificates git tar procps
 
 # 2) User & Verzeichnisse
@@ -186,6 +186,7 @@ if ! id -u "$NETWATCHER_USER" >/dev/null 2>&1; then
 else
   warn "User '$NETWATCHER_USER' existiert bereits – überspringe Anlage."
 fi
+usermod -aG arpwatch "$NETWATCHER_USER" 2>/dev/null || true
 
 log "Erstelle Verzeichnisse …"
 mkdir -p "$NETWATCHER_DB_DIR"

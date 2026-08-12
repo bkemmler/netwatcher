@@ -59,7 +59,7 @@ def test_migration_v1_to_v2(tmp_db):
         assert "dns_name" in cols
         assert "opnsense_hostname" in cols
         ver = conn.execute("PRAGMA user_version").fetchone()[0]
-        assert ver == 3
+        assert ver == 4
 
 
 def test_migration_v2_to_v3(tmp_db):
@@ -81,7 +81,13 @@ def test_migration_v2_to_v3(tmp_db):
         cols = {r[1] for r in conn.execute("PRAGMA table_info(devices)")}
         assert "opnsense_hostname" in cols
         ver = conn.execute("PRAGMA user_version").fetchone()[0]
-        assert ver == 3
+        assert ver == 4
+
+
+def test_schema_v4_external_columns(tmp_db):
+    with db.connect(tmp_db) as conn:
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(devices)")}
+        assert {"external_info", "external_last_sync"} <= cols
 
 
 def test_upsert_device_new_and_existing(tmp_db):
