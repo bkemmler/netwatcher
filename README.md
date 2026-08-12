@@ -2,8 +2,8 @@
 
 Netzwerk-Geräte-Scanner für den Einsatz in einem Proxmox-LXC (Debian 13 / Trixie).
 Scanned alle 5 Minuten das lokale Netzwerk nach neuen Geräten (`arp-scan`),
-führt stündlich Detail-Scans (`nmap -O -sV`) durch, speichert alles in SQLite
-und bietet eine Web-UI zur Ansage/Suche/Filter/Export sowie Konfiguration.
+führt alle 6 Stunden Detail-Scans (`nmap -O -sV`) durch, speichert alles in SQLite
+und bietet eine Web-UI zur Ansicht/Suche/Filter/Export sowie Konfiguration.
 Neu gefundene Geräte lösen eine Gotify-Benachrichtigung aus.
 
 ## Voraussetzungen (im LXC)
@@ -12,53 +12,80 @@ Neu gefundene Geräte lösen eine Gotify-Benachrichtigung aus.
 - `arp-scan`, `nmap`, `sudo` (Container braucht `CAP_NET_RAW`)
 - `python3-venv`
 
-```sh
-apt update
-apt install -y python3-venv python3-pip arp-scan nmap sudo
-```
-
 > LXC muss `CAP_NET_RAW` erlaubt haben, sonst kann `arp-scan` keine Layer-2-
 > Pakete senden. In der Proxmox-Konfiguration des Containers (`/etc/pve/lxc/CTID.conf`)
 > sicherstellen, dass kein `lxc.cap.drop` `net_raw` enthält. Unprivileged
 > Container benötigen zusätzlich `/dev/net/just_network_access` – meist
 > reicht `CAP_NET_RAW` bis `25` verfügbar.
 
-## Installation
+## Installation (automatisch)
+
+Der Installer `scripts/install.sh` führt alle Schritte automatisiert aus:
 
 ```sh
 # als root im LXC
+bash scripts/install.sh
+```
+
+Der Installer fragt interaktiv nach:
+- System-User (Default: `netwatcher`)
+- Verzeichnisse (Default: `/opt/netwatcher`)
+- Web-UI Host/Port
+- Admin-Benutzername und Passwort
+
+Anschließend sind alle systemd-Units aktiv und die Web-UI erreichbar.
+
+**Non-interaktive Installation** (CI/Automatisierung):
+
+```sh
+INTERACTIVE=0 bash scripts/install.sh
+```
+
+**Nach einem Code-Update nur Units + Web-Service aktualisieren:**
+
+```sh
+bash scripts/install.sh --update
+```
+
+**De-Installation:**
+
+```sh
+bash scripts/install.sh --uninstall
+```
+
+## Manuelle Installation
+
+```sh
+# als root im LXC
+apt update
+apt install -y python3-venv python3-pip arp-scan nmap sudo
+
 useradd --system --create-home --home-dir /opt/netwatcher netwatcher
 sudo -u netwatcher git clone <repo-url> /opt/netwatcher/app
-# oder lokal kopieren.
 
 sudo -u netwatcher bash -lc '
   cd /opt/netwatcher/app
   python3 -m venv .venv
   .venv/bin/pip install -r requirements.txt
 '
-```
 
-## Setup
-
-```sh
 export NETWATCHER_DB=/opt/netwatcher/data/netwatcher.db
-export NETWATCHER_SECRET="$(openssl rand -hex 32)"   # Session-Secret
+export NETWATCHER_SECRET="$(openssl rand -hex 32)"
+mkdir -p /opt/netwatcher/data
+chown -R netwatcher:netwatcher /opt/netwatcher/data
+
 sudo -u netwatcher bash -lc "
   export NETWATCHER_DB=$NETWATCHER_DB
   cd /opt/netwatcher/app
   .venv/bin/python -m netwatcher init-db
-  .venv/bin/python -m netwatcher add-user admin      # fragt interaktiv nach Passwort
+  .venv/bin/python -m netwatcher add-user admin
 "
 ```
 
-Erstkontrolle in der Web-UI: DataBase liegt in `~/.netwatcher` bzw. ist
-über `NETWATCHER_DB` frei wählbar. Immer `NETWATCHER_DB` und
-`NETWATCHER_SECRET` als Umgebungsvariable setzen (systemd-Unit).
+## systemd-Units (manuell)
 
-## systemd-Units einrichten
-
-Die Templates in `scripts/` enthalten Platzhalter (z.B. `__NETWATCHER_USER__`).
-Folgende Werte setzen:
+Die Templates in `scripts/` enthalten Platzhalter (`__NETWATCHER_USER__` etc.).
+Der `install.sh`-Installer befüllt diese automatisch. Für manuelle Installation:
 
 | Platzhalter | Beispiel |
 |---|---|
@@ -102,18 +129,11 @@ systemctl enable --now netwatcher-detail.timer
 
 - **Web-UI**: `http://<lxc-ip>:5000/`
 - Login mit angelegtem Benutzer
-- Geräte: suchen/filtern/sortieren, einzeln anklicken für Details &
-  Bearbeiten (Name/Notizen/als bekannt markieren)
+- Geräte: suchen/filtern/sortieren, Spalten ein-/ausblenden, inline bearbeiten (Name/Status/Notizen)
 - Export: CSV/JSON über Buttons in der Geräte-Liste
-- Konfiguration: IP-Bereich, Interface, Scan-Intervall, Gotify-URL/Token,
-  Benutzer verwalten, Test-Nachricht senden
-- "Jetzt scannen" triggert arp-Scan manuell (Web-UI)
-- nmap-Detail-Scan wird einmal pro Stunde vom `netwatcher-detail.timer`
-  für alle bekannten Geräte ausgeführt
-
-Die beiden systemd-Scan-Units laufen als `root`, da `arp-scan` und die
-nmap-OS-Erkennung erhöhte Netzwerkrechte benötigen. Die Web-UI läuft weiterhin
-unter dem unprivilegierten Benutzer `netwatcher`.
+- Konfiguration: IP-Bereich, Interface, Scan-Intervall, Detail-Scan alle 6h, DNS/mDNS/IPv6/HTTP/TLS/UPnP/SMB aktivieren, Gotify, OPNsense-Sync, Datumsformat
+- "Jetzt scannen" / "Detail-Scan" triggert manuelle Scans
+- OPNsense-Dnsmasq-Integration: statische DHCP-Hosts über API auslesen und MAC-abgleichen
 
 ## CLI-Kommandos
 
@@ -122,6 +142,8 @@ python -m netwatcher init-db              # DB initialisieren
 python -m netwatcher add-user <name>     # Web-UI User anlegen
 python -m netwatcher scan                # arp-Scan jetzt (wie timer)
 python -m netwatcher detail-scan         # nmap-Detail für alle Geräte
+python -m netwatcher cleanup-history     # Verlaufseinträge vom Vortag löschen
+python -m netwatcher opnsense-sync       # OPNsense Dnsmasq-Hosts synchronisieren
 python -m netwatcher serve               # Flask dev-server (nur Test)
 ```
 
