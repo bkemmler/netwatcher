@@ -51,8 +51,18 @@ def _parse():
     with f.open(newline="", encoding="utf-8", errors="replace") as fh:
         reader = csv.DictReader(fh)
         for row in reader:
-            assignment = (row.get("assignment") or "").strip().upper()
-            vendor = (row.get("organizationName") or row.get("Organization Name") or "").strip()
+            # IEEE has used several header spellings over time.
+            normalized = {
+                str(key).strip().lower().replace(" ", ""): value
+                for key, value in row.items()
+                if key is not None
+            }
+            assignment = (normalized.get("assignment") or "").strip().upper()
+            vendor = (
+                normalized.get("organizationname")
+                or normalized.get("organization")
+                or ""
+            ).strip()
             if assignment and vendor:
                 # normalize to plain AABBCC form
                 plain = assignment.replace("-", "").replace(":", "").replace(".", "")
@@ -74,6 +84,13 @@ def _maybe_download():
             _map = {}
             return
     _map = _parse()
+    # Do not permanently accept an empty cache after a malformed/changed CSV.
+    if not _map:
+        try:
+            download_oui(force=True)
+            _map = _parse()
+        except Exception:
+            _map = {}
 
 
 def vendor_for(mac: str) -> str | None:
