@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import sqlite3
 import json
+import ipaddress
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterable
@@ -438,6 +439,24 @@ def list_devices(
         total = conn.execute(
             f"SELECT COUNT(*) AS c FROM devices{clause}", params
         ).fetchone()["c"]
+        if sort == "ip_last":
+            all_rows = [dict(r) for r in conn.execute(
+                f"SELECT * FROM devices{clause}", params
+            ).fetchall()]
+
+            def ip_key(row: dict[str, Any]) -> int | None:
+                try:
+                    return int(ipaddress.IPv4Address(row.get("ip_last", "")))
+                except (ipaddress.AddressValueError, TypeError, ValueError):
+                    return None
+
+            valid = [row for row in all_rows if ip_key(row) is not None]
+            invalid = [row for row in all_rows if ip_key(row) is None]
+            valid.sort(key=lambda row: ip_key(row), reverse=sort_dir == "desc")
+            ordered = valid + invalid
+            offset = (page - 1) * page_size
+            return ordered[offset:offset + page_size], total
+
         offset = (page - 1) * page_size
         rows = conn.execute(
             f"SELECT * FROM devices{clause} ORDER BY {sort} {sort_dir} "

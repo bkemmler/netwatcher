@@ -235,3 +235,21 @@ def test_update_device_opnsense(tmp_db):
     assert dev["hostname"] == "opnsense-host"
     # name should also be filled from OPNsense hostname
     assert dev["name"] == "opnsense-host"
+
+
+def test_list_devices_sorts_ipv4_numerically(tmp_db):
+    for last_octet in (1, 10, 2):
+        db.upsert_device(
+            f"aa:bb:cc:dd:ee:{last_octet:02x}",
+            f"10.10.10.{last_octet}", "V", "O", "2024-01-01T00:00:00",
+            db_path=tmp_db, insert_history=False,
+        )
+
+    ascending, _ = db.list_devices(sort="ip_last", sort_dir="asc", page_size=20, db_path=tmp_db)
+    descending, _ = db.list_devices(sort="ip_last", sort_dir="desc", page_size=20, db_path=tmp_db)
+    assert [d["ip_last"] for d in ascending] == [
+        "10.10.10.1", "10.10.10.2", "10.10.10.10"
+    ]
+    assert [d["ip_last"] for d in descending] == [
+        "10.10.10.10", "10.10.10.2", "10.10.10.1"
+    ]
