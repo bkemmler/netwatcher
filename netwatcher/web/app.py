@@ -261,7 +261,12 @@ def create_app() -> Flask:
         sort = request.args.get("sort", "first_seen")
         dirn = request.args.get("dir", "desc")
         page = max(1, int(request.args.get("page", "1")))
-        page_size = 25
+        try:
+            page_size = int(request.args.get("page_size", "20"))
+        except ValueError:
+            page_size = 20
+        if page_size not in (20, 50, 100, 200):
+            page_size = 20
 
         items, total = db.list_devices(
             search=search,
@@ -287,6 +292,7 @@ def create_app() -> Flask:
             known_filter=known_filter,
             sort=sort,
             dir=dirn,
+            page_size=page_size,
             duplicate_ips=duplicate_ips,
         )
 
@@ -334,6 +340,7 @@ def create_app() -> Flask:
             sort=request.form.get("sort", "first_seen"),
             dir=request.form.get("dir", "desc"),
             page=request.form.get("page", "1"),
+            page_size=request.form.get("page_size", "20"),
         ))
 
     # --- export ---

@@ -63,13 +63,21 @@
 
 {% set pagination %}
 {% if pages > 1 %}
+<div class="d-flex align-items-center gap-2">
 <nav><ul class="pagination pagination-sm mb-0">
   {% for p in range(1, pages + 1) %}
     <li class="page-item {% if p == page %}active{% endif %}">
-      <a class="page-link" href="{{ url_for('devices', q=search, known=known_filter, sort=sort, dir=dir, page=p) }}">{{ p }}</a>
+      <a class="page-link" href="{{ url_for('devices', q=search, known=known_filter, sort=sort, dir=dir, page=p, page_size=page_size) }}">{{ p }}</a>
     </li>
   {% endfor %}
 </ul></nav>
+<label class="visually-hidden" for="page-size">Einträge pro Seite</label>
+<select id="page-size" class="form-select form-select-sm" style="width:auto" onchange="changePageSize(this.value)">
+  {% for size in [20, 50, 100, 200] %}
+    <option value="{{ size }}" {% if page_size == size %}selected{% endif %}>{{ size }}</option>
+  {% endfor %}
+</select>
+</div>
 {% endif %}
 {% endset %}
 
@@ -90,6 +98,7 @@
   <input type="hidden" name="sort" value="{{ sort }}">
   <input type="hidden" name="dir" value="{{ dir }}">
   <input type="hidden" name="page" value="{{ page }}">
+  <input type="hidden" name="page_size" value="{{ page_size }}">
 
   <div class="table-responsive">
     <table class="table table-sm table-hover align-middle">
@@ -164,6 +173,13 @@
 </div>
 
 <script>
+function changePageSize(size) {
+  var url = new URL(window.location.href);
+  url.searchParams.set('page_size', size);
+  url.searchParams.set('page', '1');
+  window.location.href = url.toString();
+}
+
 (function() {
   var STORAGE_KEY = 'netwatcher-columns';
   var colState = {};
