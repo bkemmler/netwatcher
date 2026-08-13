@@ -4,6 +4,15 @@
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <h3 class="mb-0">Geräte ({{ total }})</h3>
   <div class="btn-group">
+    <form method="post" action="{{ url_for('profile_scan_now') }}" class="d-flex align-items-center me-1">
+      <label class="visually-hidden" for="scan-profile">Scan-Profil</label>
+      <select class="form-select form-select-sm" id="scan-profile" name="profile" title="Scan-Profil">
+        <option value="quick">Schnellscan</option>
+        <option value="detail" selected>Detailscan</option>
+        <option value="full">Vollscan</option>
+      </select>
+      <button class="btn btn-outline-primary btn-sm ms-1">Start</button>
+    </form>
     <div class="dropdown">
       <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Spalten
@@ -49,20 +58,6 @@
   </div>
   <div class="col-md-1">
     <button class="btn btn-primary btn-sm w-100">Filter</button>
-  </div>
-</form>
-
-<form method="post" action="{{ url_for('profile_scan_now') }}" class="row g-2 align-items-center mb-2">
-  <div class="col-auto">
-    <label class="visually-hidden" for="scan-profile">Scan-Profil</label>
-    <select class="form-select form-select-sm" id="scan-profile" name="profile">
-      <option value="quick">Schnellscan (Top-20-Ports)</option>
-      <option value="detail" selected>Detailscan (OS/Dienste)</option>
-      <option value="full">Vollscan (alle Ports)</option>
-    </select>
-  </div>
-  <div class="col-auto">
-    <button class="btn btn-outline-primary btn-sm">Scan starten</button>
   </div>
 </form>
 
