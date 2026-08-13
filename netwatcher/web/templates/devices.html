@@ -33,10 +33,13 @@
 </div>
 
 <form method="get" class="row g-2 mb-2">
-  <div class="col-md-4">
+  <div class="col-md-3">
     <input type="text" name="q" class="form-control form-control-sm" placeholder="Suche (IPv4, MAC, Name, Hersteller)" value="{{ search }}">
   </div>
   <div class="col-md-3">
+    <input type="text" name="vendor" class="form-control form-control-sm" placeholder="Hersteller" value="{{ vendor_filter }}">
+  </div>
+  <div class="col-md-2">
     <select name="known" class="form-select form-select-sm">
       <option value="">alle</option>
       <option value="1" {% if known_filter == '1' %}selected{% endif %}>bekannt</option>
@@ -50,7 +53,7 @@
       {% endfor %}
     </select>
   </div>
-  <div class="col-md-2">
+  <div class="col-md-1">
     <select name="dir" class="form-select form-select-sm">
       <option value="desc" {% if dir == 'desc' %}selected{% endif %}>absteigend</option>
       <option value="asc" {% if dir == 'asc' %}selected{% endif %}>aufsteigend</option>
@@ -67,7 +70,7 @@
 <nav><ul class="pagination pagination-sm mb-0">
   {% for p in range(1, pages + 1) %}
     <li class="page-item {% if p == page %}active{% endif %}">
-      <a class="page-link" href="{{ url_for('devices', q=search, known=known_filter, sort=sort, dir=dir, page=p, page_size=page_size) }}">{{ p }}</a>
+      <a class="page-link" href="{{ url_for('devices', q=search, known=known_filter, vendor=vendor_filter, sort=sort, dir=dir, page=p, page_size=page_size) }}">{{ p }}</a>
     </li>
   {% endfor %}
 </ul></nav>
@@ -95,6 +98,7 @@
 <form method="post" action="{{ url_for('bulk_update') }}" id="device-form">
   <input type="hidden" name="q" value="{{ search }}">
   <input type="hidden" name="known" value="{{ known_filter }}">
+  <input type="hidden" name="vendor" value="{{ vendor_filter }}">
   <input type="hidden" name="sort" value="{{ sort }}">
   <input type="hidden" name="dir" value="{{ dir }}">
   <input type="hidden" name="page" value="{{ page }}">

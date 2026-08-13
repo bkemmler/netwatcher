@@ -137,6 +137,7 @@ systemctl enable --now netwatcher-detail.timer
 - "Jetzt scannen" / "Detail-Scan" triggert manuelle Scans
 - Scan-Profile: Schnellscan, Detailscan und Vollscan (alle Ports) über die Geräteliste
 - OPNsense-Dnsmasq-Integration: statische DHCP-Hosts und aktive Leases über die API auslesen, IPv4/IPv6 zusammenführen und per MAC abgleichen
+- Herstellerseite mit Anzahl der Geräte, Suche, Sortierung und direktem Herstellerfilter in der Geräteliste
 
 ## CLI-Kommandos
 

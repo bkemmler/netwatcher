@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Hersteller – Netwatcher{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="mb-0">Hersteller</h3>
+</div>
+
+<form method="get" class="row g-2 mb-3">
+  <div class="col-md-6">
+    <input type="text" name="q" class="form-control form-control-sm" placeholder="Hersteller suchen" value="{{ search }}">
+  </div>
+  <div class="col-md-3">
+    <select name="sort" class="form-select form-select-sm">
+      <option value="vendor" {% if sort == 'vendor' %}selected{% endif %}>Hersteller</option>
+      <option value="count" {% if sort == 'count' %}selected{% endif %}>Anzahl Geräte</option>
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select name="dir" class="form-select form-select-sm">
+      <option value="asc" {% if dir == 'asc' %}selected{% endif %}>aufsteigend</option>
+      <option value="desc" {% if dir == 'desc' %}selected{% endif %}>absteigend</option>
+    </select>
+  </div>
+  <div class="col-md-1">
+    <button class="btn btn-primary btn-sm w-100">Filter</button>
+  </div>
+</form>
+
+<div class="table-responsive">
+  <table class="table table-sm table-hover align-middle">
+    <thead><tr><th>Hersteller</th><th>Anzahl Geräte</th></tr></thead>
+    <tbody>
+      {% for item in manufacturers %}
+      <tr>
+        <td>{{ item.vendor }}</td>
+        <td><a href="{{ url_for('devices', vendor=item.vendor) }}">{{ item.device_count }}</a></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="2" class="text-center text-muted">Keine Hersteller gefunden.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

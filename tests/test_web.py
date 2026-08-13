@@ -102,6 +102,19 @@ def test_config_page_shows_opnsense_section(client):
     assert b"OPNsense" in resp.data
 
 
+def test_manufacturers_page_and_vendor_filter(client, tmp_db):
+    db.upsert_device(
+        "aa:bb:cc:dd:ff:01", "10.0.0.1", "Vendor A", "O",
+        "2024-01-01T00:00:00", db_path=tmp_db, insert_history=False,
+    )
+    response = client.get("/manufacturers")
+    assert response.status_code == 200
+    assert b"Vendor A" in response.data
+    response = client.get("/?vendor=Vendor%20A")
+    assert response.status_code == 200
+    assert b"10.0.0.1" in response.data
+
+
 def test_opnsense_sync_endpoint(client):
     resp = client.post("/config/opnsense-sync", follow_redirects=True)
     assert resp.status_code == 200

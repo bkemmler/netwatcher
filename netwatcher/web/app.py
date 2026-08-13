@@ -253,6 +253,7 @@ def create_app() -> Flask:
     def devices():
         search = request.args.get("q", "").strip() or None
         known_filter = request.args.get("known", "")
+        vendor_filter = request.args.get("vendor", "").strip() or None
         known_only = None
         if known_filter == "1":
             known_only = True
@@ -271,6 +272,7 @@ def create_app() -> Flask:
         items, total = db.list_devices(
             search=search,
             known_only=known_only,
+            vendor_filter=vendor_filter,
             sort=sort,
             sort_dir=dirn,
             page=page,
@@ -290,10 +292,25 @@ def create_app() -> Flask:
             page=page,
             search=search or "",
             known_filter=known_filter,
+            vendor_filter=vendor_filter or "",
             sort=sort,
             dir=dirn,
             page_size=page_size,
             duplicate_ips=duplicate_ips,
+        )
+
+    @app.route("/manufacturers")
+    @login_required
+    def manufacturers():
+        search = request.args.get("q", "").strip() or None
+        sort = request.args.get("sort", "vendor")
+        direction = request.args.get("dir", "asc")
+        items = db.list_manufacturers(
+            search=search, sort=sort, sort_dir=direction, db_path=DB_PATH
+        )
+        return render_template(
+            "manufacturers.html", manufacturers=items,
+            search=search or "", sort=sort, dir=direction,
         )
 
     @app.route("/devices/<int:id>", methods=["GET", "POST"])
@@ -337,6 +354,7 @@ def create_app() -> Flask:
             "devices",
             q=request.form.get("q", ""),
             known=request.form.get("known", ""),
+            vendor=request.form.get("vendor", ""),
             sort=request.form.get("sort", "first_seen"),
             dir=request.form.get("dir", "desc"),
             page=request.form.get("page", "1"),

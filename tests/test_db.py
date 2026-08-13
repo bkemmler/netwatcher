@@ -253,3 +253,15 @@ def test_list_devices_sorts_ipv4_numerically(tmp_db):
     assert [d["ip_last"] for d in descending] == [
         "10.10.10.10", "10.10.10.2", "10.10.10.1"
     ]
+
+
+def test_list_manufacturers_counts_and_search(tmp_db):
+    for index, vendor in enumerate(("Vendor A", "Vendor A", "Vendor B", None), 1):
+        db.upsert_device(
+            f"aa:bb:cc:dd:ff:{index:02x}", f"10.0.0.{index}", vendor, "O",
+            "2024-01-01T00:00:00", db_path=tmp_db, insert_history=False,
+        )
+    items = db.list_manufacturers(sort="count", sort_dir="desc", db_path=tmp_db)
+    assert items[0] == {"vendor": "Vendor A", "device_count": 2}
+    assert any(item["vendor"] == "Unbekannt" for item in items)
+    assert db.list_manufacturers(search="Vendor B", db_path=tmp_db)[0]["device_count"] == 1

@@ -401,6 +401,7 @@ def update_device_external(device_id: int, info: str | None,
 def list_devices(
     search: str | None = None,
     known_only: bool | None = None,
+    vendor_filter: str | None = None,
     sort: str = "last_seen",
     sort_dir: str = "desc",
     page: int = 1,
@@ -433,6 +434,12 @@ def list_devices(
         where.append("known = 1")
     elif known_only is False:
         where.append("known = 0")
+    if vendor_filter:
+        if vendor_filter == "Unbekannt":
+            where.append("(vendor IS NULL OR vendor='')")
+        else:
+            where.append("vendor = ?")
+            params.append(vendor_filter)
     clause = (" WHERE " + " AND ".join(where)) if where else ""
 
     with connect(db_path) as conn:
@@ -464,6 +471,33 @@ def list_devices(
             params + [page_size, offset],
         ).fetchall()
     return [dict(r) for r in rows], total
+
+
+def list_manufacturers(
+    search: str | None = None,
+    sort: str = "vendor",
+    sort_dir: str = "asc",
+    db_path: str | None = None,
+) -> list[dict[str, Any]]:
+    """Return manufacturer names and device counts."""
+    if sort not in {"vendor", "count"}:
+        sort = "vendor"
+    direction = "DESC" if sort_dir.lower() == "desc" else "ASC"
+    vendor_expr = "CASE WHEN vendor IS NULL OR vendor='' THEN 'Unbekannt' ELSE vendor END"
+    params: list[Any] = []
+    where = ""
+    if search:
+        where = f"WHERE {vendor_expr} LIKE ?"
+        params.append(f"%{search}%")
+    order = "vendor" if sort == "vendor" else "device_count"
+    with connect(db_path) as conn:
+        rows = conn.execute(
+            f"SELECT {vendor_expr} AS vendor, COUNT(*) AS device_count "
+            f"FROM devices {where} GROUP BY {vendor_expr} "
+            f"ORDER BY {order} {direction}, vendor ASC",
+            params,
+        ).fetchall()
+    return [dict(row) for row in rows]
 
 
 def get_device(
