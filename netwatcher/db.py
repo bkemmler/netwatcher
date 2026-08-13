@@ -333,12 +333,31 @@ def update_device_opnsense(
 ) -> None:
     """Fill missing device fields from OPNsense data (never overwrite existing)."""
     with connect(db_path) as conn:
+        existing = conn.execute(
+            "SELECT opnsense_ipv4, opnsense_ipv6 FROM devices WHERE id=?",
+            (device_id,),
+        ).fetchone()
+
+        def merge_addresses(old: str | None, new: str | None) -> str | None:
+            values: list[str] = []
+            for raw in (old, new):
+                if not raw:
+                    continue
+                try:
+                    parsed = json.loads(raw)
+                    values.extend(parsed if isinstance(parsed, list) else [str(parsed)])
+                except (json.JSONDecodeError, TypeError):
+                    values.append(raw)
+            return json.dumps(list(dict.fromkeys(values))) if values else None
+
+        merged_ipv4 = merge_addresses(existing["opnsense_ipv4"] if existing else None, ipv4)
+        merged_ipv6 = merge_addresses(existing["opnsense_ipv6"] if existing else None, ipv6)
         conn.execute(
             "UPDATE devices SET "
             "opnsense_hostname=?, opnsense_ipv4=?, opnsense_ipv6=?, "
             "opnsense_description=?, opnsense_last_sync=? "
             "WHERE id=?",
-            (hostname, ipv4, ipv6, description, now_iso, device_id),
+            (hostname, merged_ipv4, merged_ipv6, description, now_iso, device_id),
         )
         # Only fill hostname and name if not already set
         conn.execute(

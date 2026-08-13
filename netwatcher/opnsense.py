@@ -21,6 +21,41 @@ class OpnHost:
     description: str | None = None
 
 
+def fetch_active_leases(
+    url: str,
+    api_key: str,
+    api_secret: str,
+    verify_tls: bool = True,
+    timeout: float = 10.0,
+) -> list[OpnHost]:
+    """Fetch active Dnsmasq leases, including IPv6 leases when exposed."""
+    endpoint = url.rstrip("/") + "/api/dnsmasq/leases/search"
+    try:
+        response = requests.get(
+            endpoint, auth=(api_key, api_secret), verify=verify_tls, timeout=timeout
+        )
+        response.raise_for_status()
+        data = response.json()
+        rows = data.get("rows", data if isinstance(data, list) else [])
+    except (requests.RequestException, ValueError, TypeError) as exc:
+        logger.warning("OPNsense lease API failed: %s", exc)
+        return []
+
+    result: list[OpnHost] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        addresses = _split_ips(row.get("ip", row.get("address", "")))
+        result.append(OpnHost(
+            hostname=row.get("hostname") or row.get("host") or None,
+            ipv4=[ip for ip in addresses if _is_v4(ip)],
+            ipv6=[ip for ip in addresses if _is_v6(ip)],
+            mac=_normalize_mac(row.get("mac", row.get("hwaddr", ""))),
+            description="active lease",
+        ))
+    return result
+
+
 def fetch_static_hosts(
     url: str,
     api_key: str,

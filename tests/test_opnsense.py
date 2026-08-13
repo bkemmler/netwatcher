@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from unittest.mock import patch
 
-from netwatcher.opnsense import fetch_static_hosts, _normalize_mac, _split_ips, _is_v4, _is_v6
+from netwatcher.opnsense import fetch_static_hosts, fetch_active_leases, _normalize_mac, _split_ips, _is_v4, _is_v6
 
 
 def test_normalize_mac():
@@ -76,3 +76,16 @@ def test_fetch_static_hosts_request_error():
         mock_post.side_effect = req.exceptions.ConnectionError("connection refused")
         hosts = fetch_static_hosts("https://192.168.1.1", "k", "s")
         assert hosts == []
+
+
+def test_fetch_active_leases():
+    with patch("netwatcher.opnsense.requests.get") as mock_get:
+        mock_get.return_value.json.return_value = {"rows": [{
+            "mac": "aa:bb:cc:dd:ee:ff",
+            "ip": "192.168.1.25,2001:db8::25",
+            "hostname": "client",
+        }]}
+        mock_get.return_value.raise_for_status.return_value = None
+        leases = fetch_active_leases("https://192.168.1.1", "k", "s")
+        assert leases[0].ipv4 == ["192.168.1.25"]
+        assert leases[0].ipv6 == ["2001:db8::25"]

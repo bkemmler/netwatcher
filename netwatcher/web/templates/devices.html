@@ -115,7 +115,7 @@
       <tbody>
         {% for d in devices %}
         <tr>
-          <td data-col="ip"><a class="{% if is_stale(d.last_seen) %}text-danger{% endif %}" href="{{ url_for('device_detail', id=d.id) }}">{{ d.ip_last }}</a></td>
+          <td data-col="ip"><a class="{% if d.ip_last in duplicate_ips %}text-warning{% elif is_stale(d.last_seen) %}text-danger{% endif %}" href="{{ url_for('device_detail', id=d.id) }}">{{ d.ip_last }}</a></td>
           <td data-col="opnsense_ipv6"><code>{{ format_ips(d.opnsense_ipv6) or '—' }}</code></td>
           <td data-col="mac"><code>{{ d.mac }}</code></td>
           <td data-col="hostname">{{ d.hostname or '—' }}</td>

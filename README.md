@@ -136,7 +136,7 @@ systemctl enable --now netwatcher-detail.timer
 - LibreNMS und Greenbone sind standardmäßig ausgeblendet. Aktivierung erfolgt serverseitig mit `NETWATCHER_REMOTE_INTEGRATIONS=1` beim Installer beziehungsweise beim systemd-Update.
 - "Jetzt scannen" / "Detail-Scan" triggert manuelle Scans
 - Scan-Profile: Schnellscan, Detailscan und Vollscan (alle Ports) über die Geräteliste
-- OPNsense-Dnsmasq-Integration: statische DHCP-Hosts über API auslesen und MAC-abgleichen
+- OPNsense-Dnsmasq-Integration: statische DHCP-Hosts und aktive Leases über die API auslesen, IPv4/IPv6 zusammenführen und per MAC abgleichen
 
 ## CLI-Kommandos
 

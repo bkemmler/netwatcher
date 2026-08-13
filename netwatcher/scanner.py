@@ -457,7 +457,13 @@ def run_scan(db_path: str | None = None) -> dict[str, Any]:
     now = now_iso()
     new_devices: list[tuple[int, ArpHost]] = []
     for h in hosts:
-        vendor = h.vendor or macvendor.vendor_for(h.mac)
+        vendor = h.vendor
+        vendor_from_mac = False
+        if not vendor:
+            vendor = macvendor.vendor_for(h.mac)
+            vendor_from_mac = bool(vendor)
+        if vendor_from_mac:
+            vendor = f"[{vendor}]"
         oui = macvendor.oui_prefix(h.mac)
         device_id, is_new = db.upsert_device(
             mac=h.mac,
@@ -475,11 +481,12 @@ def run_scan(db_path: str | None = None) -> dict[str, Any]:
         from . import notifications
 
         for device_id, h in new_devices:
+            stored = db.get_device(device_id, db_path) or {}
             notifications.notify_new_device(
                 device_id=device_id,
                 ip=h.ip,
                 mac=h.mac,
-                vendor=h.vendor,
+                vendor=stored.get("vendor") or h.vendor,
                 db_path=db_path,
             )
 
@@ -703,6 +710,16 @@ def _sync_opnsense_data(
     from . import opnsense as opn
 
     hosts = opn.fetch_static_hosts(url, key, secret, verify, timeout)
+    leases = opn.fetch_active_leases(url, key, secret, verify, timeout)
+    by_host: dict[str, Any] = {}
+    for item in [*hosts, *leases]:
+        if not item.mac:
+            continue
+        current = by_host.setdefault(item.mac, item)
+        current.ipv4 = list(dict.fromkeys([*current.ipv4, *item.ipv4]))
+        current.ipv6 = list(dict.fromkeys([*current.ipv6, *item.ipv6]))
+        current.hostname = current.hostname or item.hostname
+    hosts = list(by_host.values())
     devices = db.all_devices(db_path)
     mac_map: dict[str, int] = {d["mac"]: d["id"] for d in devices if d["mac"]}
 

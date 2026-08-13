@@ -6,6 +6,7 @@ import io
 import json
 import os
 import secrets
+from collections import Counter
 from functools import wraps
 from typing import Any
 
@@ -271,6 +272,10 @@ def create_app() -> Flask:
             page_size=page_size,
             db_path=DB_PATH,
         )
+        all_ips = Counter(
+            d["ip_last"] for d in db.all_devices(DB_PATH) if d.get("ip_last")
+        )
+        duplicate_ips = {ip for ip, count in all_ips.items() if count > 1}
         pages = max(1, (total + page_size - 1) // page_size)
         return render_template(
             "devices.html",
@@ -282,6 +287,7 @@ def create_app() -> Flask:
             known_filter=known_filter,
             sort=sort,
             dir=dirn,
+            duplicate_ips=duplicate_ips,
         )
 
     @app.route("/devices/<int:id>", methods=["GET", "POST"])
